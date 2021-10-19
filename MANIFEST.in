@@ -1,0 +1,11 @@
+recursive-include xoppylib *.pyx
+recursive-include xoppylib *.py
+recursive-include xoppylib
+recursive-include xoppylib/bin/darwin *
+recursive-include xoppylib/bin/linux *
+recursive-include xoppylib/bin/windows *
+recursive-include xoppylib/bin_run *.txt
+recursive-include xoppylib/data *
+recursive-include xoppylib/doc_txt *.txt *.par
+
+include README.txt
