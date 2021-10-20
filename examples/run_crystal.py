@@ -2,12 +2,10 @@ from xoppylib.xoppy_calc_xcrystal import xoppy_calc_xcrystal
 
 if __name__ == "__main__":
     import numpy
-    from PyQt5.QtWidgets import QApplication
     from srxraylib.plot.gol import plot
-    from orangecontrib.xoppy.widgets.optics.xcrystal import OWxcrystal
 
     tmp = xoppy_calc_xcrystal(
-        CRYSTAL_MATERIAL=32,
+        CRYSTAL_MATERIAL=32, # index of xraylib.Crystal_GetCrystalsList()
         MILLER_INDEX_H=1,
         MILLER_INDEX_K=1,
         MILLER_INDEX_L=1,
@@ -31,10 +29,9 @@ if __name__ == "__main__":
         FILECOMPLIANCE="",
     )
 
-    a = numpy.loadtxt("diff_pat.dat", skiprows=5)
+
     # L  Th-ThB{in} [microrad]  Th-ThB{out} [microrad]  phase_p[rad]  phase_s[rad]  Circ Polariz  p-polarized  s-polarized
-    print(a.shape)
-    # plot(a[:,0],a[:,-1],title="Energy = %f eV "%energy)
+    a = numpy.loadtxt("diff_pat.dat", skiprows=5)
 
     step = a[1, 0] - a[0, 0]
     h = a[:, -1]
@@ -47,4 +44,4 @@ if __name__ == "__main__":
     print("Integrated intensity [urad] = ", integrated_intensity)
     print("FWHM=", fwhm)
 
-    plot(a[:, 0], a[:, -1], xtitle="anggle [urad]", ytitle="reflectivity")
+    plot(a[:, 0], a[:, -1], xtitle="angle [urad]", ytitle="reflectivity s-pol")
