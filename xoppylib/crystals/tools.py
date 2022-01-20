@@ -3,12 +3,10 @@ import numpy
 import xraylib
 import scipy.constants as codata
 
-
 # needed by bragg_calc
 from xoppylib.crystals.bragg_preprocessor_file_io import bragg_preprocessor_file_v2_write
-from dabax.common_tools import f0_xop
+from dabax.common_tools import f0_xop, f0_xop_with_fractional_charge
 from dabax.common_tools import bragg_metrictensor, lorentz, atomic_symbols
-
 
 #
 #
@@ -36,6 +34,7 @@ def bragg_calc(descriptor="Si",hh=1,kk=1,ll=1,temper=1.0,emin=5000.0,emax=15000.
 
     # f = open(fileout,'w')
 
+    # todo: txt not longer used here... can be removed
     txt = ""
     txt += "# Bragg version, Data file type\n"
     txt += "2.5 1\n"
@@ -431,10 +430,9 @@ def crystal_fh(input_dictionary,phot_in,theta=None,forceratio=0):
 #
 #
 #
-def bragg_calc2(descriptor="YB66", hh=1, kk=1, ll=1, temper=1.0, emin=5000.0, emax=15000.0, estep=100.0, ANISO_SEL=0,
+def bragg_calc2(descriptor="YB66", hh=1, kk=1, ll=1, temper=1.0,
+                emin=5000.0, emax=15000.0, estep=100.0, ANISO_SEL=0,
                 fileout=None,
-                # sourceCryst=2, # 0=xraylib, 1=dabax, 2=auto
-                # sourceF0=2,    # 0=xraylib, 1=dabax, 2=auto
                 do_not_prototype=0, # 0=use site groups (recommended), 1=use all individual sites
                 verbose=True,
                 material_constants_library=xraylib,
@@ -479,7 +477,6 @@ def bragg_calc2(descriptor="YB66", hh=1, kk=1, ll=1, temper=1.0, emin=5000.0, em
     # test crystal data - not needed
     itest = 0
     if itest:
-
         print("  Unit cell dimensions are %f %f %f" % (cryst['a'], cryst['b'], cryst['c']))
         print("  Unit cell angles are %f %f %f" % (cryst['alpha'], cryst['beta'], cryst['gamma']))
         print("  Unit cell volume is %f A^3" % volume)
@@ -614,14 +611,15 @@ def bragg_calc2(descriptor="YB66", hh=1, kk=1, ll=1, temper=1.0, emin=5000.0, em
     #                     f0coeffs.append(f0_xop(0,AtomicName=x))    #charged atom
 
 
-    try:
-        f0coeffs = []
-        for i in indices_prototypical:
-                f0coeffs.append(material_constants_library.f0_with_fractional_charge(atom[i]['Zatom'], atom[i]['charge']) )
-    except:
-        f0coeffs = []
-        for i in indices_prototypical:
-            f0coeffs.append(f0_xop(atom[i]['Zatom']))
+    f0coeffs = []
+    for i in indices_prototypical:
+        try:
+            charge = atom[i]['charge']
+        except:
+            charge = 0.0
+        f0coeffs.append(f0_xop_with_fractional_charge(atom[i]['Zatom'], charge))
+
+
     txt += "# Number of different element-sites in unit cell NBATOM:\n%d \n" % number_of_prototypical_atoms
     output_dictionary["nbatom"] = number_of_prototypical_atoms
 
@@ -748,6 +746,7 @@ def bragg_calc2(descriptor="YB66", hh=1, kk=1, ll=1, temper=1.0, emin=5000.0, em
 
     return output_dictionary
 
+# todo: rename
 def TemperFactor(sinTheta_lambda,anisos,Miller={'h':1,'k':1,'l':1},cell={'a':23.44,'b':23.44,'c':23.44},n=1936):
     '''
     #+
@@ -772,7 +771,6 @@ def TemperFactor(sinTheta_lambda,anisos,Miller={'h':1,'k':1,'l':1},cell={'a':23.
         s = aniso['start']-1
         e = aniso['end']
         if aniso['beta11'] >= 1:
-            print(">>>>>>>>>>>>>>>>> WHY AM I HERE? ")
             #if beta11>=1, then beta22 is Beq, the other fields are unused
             #if Beq specified, anisotropic temperature factor same as isotropic
             Beq = aniso['beta22']
@@ -789,7 +787,8 @@ def TemperFactor(sinTheta_lambda,anisos,Miller={'h':1,'k':1,'l':1},cell={'a':23.
 
     return results
 
-def mare_calc(descriptor,H,K,L,HMAX,KMAX,LMAX,FHEDGE,DISPLAY,lambda1,deltalambda,PHI,DELTAPHI,verbose=0):
+def mare_calc(descriptor,H,K,L,HMAX,KMAX,LMAX,FHEDGE,DISPLAY,lambda1,deltalambda,PHI,DELTAPHI,
+              material_constants_library=xraylib,verbose=0):
     """
         Calculates:
 
@@ -849,7 +848,7 @@ def mare_calc(descriptor,H,K,L,HMAX,KMAX,LMAX,FHEDGE,DISPLAY,lambda1,deltalambda
     list_of_scripts = []
 
 
-    cryst = xraylib.Crystal_GetCrystal(descriptor)
+    cryst = material_constants_library.Crystal_GetCrystal(descriptor)
     # volume = cryst['volume']
     #
     # #test crystal data - not needed
@@ -937,7 +936,7 @@ def mare_calc(descriptor,H,K,L,HMAX,KMAX,LMAX,FHEDGE,DISPLAY,lambda1,deltalambda
     # ;
     # ; calculate the structure needed for intensity calculations
     # ;
-
+    toangstroms = codata.h * codata.c / codata.e * 1e10
     energy = toangstroms/lambda1
 
     # ;
@@ -1259,11 +1258,7 @@ def mare_calc(descriptor,H,K,L,HMAX,KMAX,LMAX,FHEDGE,DISPLAY,lambda1,deltalambda
 if __name__ == "__main__":
 
     from dabax.dabax_xraylib import DabaxXraylib
-    import socket
-    if socket.getfqdn().find("esrf") >= 0:
-        dx = DabaxXraylib(dabax_repository="http://ftp.esrf.fr/pub/scisoft/DabaxFiles/")
-    else:
-        dx = DabaxXraylib()
+    dx = DabaxXraylib()
 
     # tmp = bragg_calc(descriptor="Si",hh=1,kk=1,ll=1,temper=1.0,emin=5000.0,emax=15000.0,estep=100.0,
     #            fileout="bragg_v2_xraylib.dat", material_constants_library=xraylib)
@@ -1272,25 +1267,24 @@ if __name__ == "__main__":
     #            fileout="bragg_v2_dabax.dat", material_constants_library=dx)
 
 
-
-
     tmp = bragg_calc2(descriptor="Si",hh=1,kk=1,ll=1,temper=1.0,emin=5000.0,emax=15000.0,estep=100.0,
-               fileout="bragg_v2_xraylib.dat", material_constants_library= )
+               fileout="bragg_v2_xraylib.dat", material_constants_library=xraylib )
 
     tmp = bragg_calc2(descriptor="Si",hh=1,kk=1,ll=1,temper=1.0,emin=5000.0,emax=15000.0,estep=100.0,
                fileout="bragg_v2_dabax.dat", material_constants_library=dx)
-
-
 
 
     tmp = bragg_calc2(descriptor="YB66", hh=1, kk=1, ll=1, temper=1.0,
                 emin=5000.0, emax=15000.0, estep=100.0,
                 ANISO_SEL=0,
                 fileout="bragg_yb66.dat",
-                # sourceCryst=2, # 0=xraylib, 1=dabax, 2=auto
-                # sourceF0=2,    # 0=xraylib, 1=dabax, 2=auto
                 do_not_prototype=0, # 0=use site groups (recommended), 1=use all individual sites
                 verbose=True,
                 material_constants_library=dx)
 
-    mare_calc()
+
+    # from orangecontrib.xoppy.util.xoppy_xraylib_util import mare_calc as mare_calc_old
+    # m1 = mare_calc_old("Si", 2, 2, 2, 3, 3, 3, 2e-8, 3, 1.54, 0.01, -20.0, 0.1)
+    # m2 = mare_calc("Si", 2, 2, 2, 3, 3, 3, 2e-8, 3, 1.54, 0.01, -20.0, 0.1,
+    #                material_constants_library=dx)
+    # print(m2)

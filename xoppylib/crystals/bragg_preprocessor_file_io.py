@@ -1,13 +1,5 @@
 
 import numpy
-import xraylib
-import scipy.constants as codata
-
-# needed by bragg_calc
-from dabax.common_tools import f0_xop
-
-# needed by bragg_calc
-from dabax.common_tools import bragg_metrictensor, atomic_symbols
 
 
 # todo: return txt
@@ -356,32 +348,5 @@ def __parse_line(line, remove=[]):
     variables = line.split(" ")
     return variables
 
-# if __name__ == "__main__":
-#
-#     from xoppylib.crystals.tools import bragg_calc
-#
-#     from dabax.dabax_xraylib import DabaxXraylib
-#     import socket
-#     if socket.getfqdn().find("esrf") >= 0:
-#         dx = DabaxXraylib(dabax_repository="http://ftp.esrf.fr/pub/scisoft/DabaxFiles/")
-#     else:
-#         dx = DabaxXraylib()
-#
-#     tmp = bragg_calc(descriptor="Si",hh=1,kk=1,ll=1,temper=1.0,emin=5000.0,emax=15000.0,estep=100.0,
-#                fileout="bragg_v2_xraylib.dat", material_constants_library=xraylib)
-#
-#     bragg_preprocessor_file_v2_write(tmp,"tmp.dat")
-    # tmp = bragg_calc(descriptor="Si",hh=1,kk=1,ll=1,temper=1.0,emin=5000.0,emax=15000.0,estep=100.0,
-    #            fileout="bragg_v2_dabax.dat", material_constants_library=dx)
-    #
-    #
-    # tmp = bragg_calc2(descriptor="YB66", hh=1, kk=1, ll=1, temper=1.0,
-    #             emin=5000.0, emax=15000.0, estep=100.0, ANISO_SEL=0,
-    #             fileout=None,
-    #             sourceCryst=2, # 0=xraylib, 1=dabax, 2=auto
-    #             sourceF0=2,    # 0=xraylib, 1=dabax, 2=auto
-    #             do_not_prototype=0, # 0=use site groups (recommended), 1=use all individual sites
-    #             verbose=True,
-    #             dabax_lib=dx,)
 
 

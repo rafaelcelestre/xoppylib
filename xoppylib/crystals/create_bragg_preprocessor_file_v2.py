@@ -85,48 +85,42 @@ def create_bragg_preprocessor_file_v2(interactive=True,
 if __name__ == "__main__":
 
     from xoppylib.crystals.bragg_preprocessor_file_io import bragg_preprocessor_file_v2_read
-    method = 0
-    if method == 0:
-        from dabax.dabax_xraylib import DabaxXraylib
-        import socket
-        if socket.getfqdn().find("esrf") >= 0:
-            dx = DabaxXraylib(dabax_repository="http://ftp.esrf.fr/pub/scisoft/DabaxFiles/")
-        else:
+    from dabax.dabax_xraylib import DabaxXraylib
+    for method in [0,1]:
+        if method == 0:
             dx = DabaxXraylib()
+            SHADOW_FILE = "bragg_v2_dabax.dat"
+            tmp = create_bragg_preprocessor_file_v2(interactive=False, DESCRIPTOR="Si", H_MILLER_INDEX=1, K_MILLER_INDEX=1, L_MILLER_INDEX=1,
+                  TEMPERATURE_FACTOR=1.0, E_MIN=5000.0, E_MAX=15000.0, E_STEP=100.0, SHADOW_FILE=SHADOW_FILE,
+                  material_constants_library=dx)
 
-        print(dx.info())
-        SHADOW_FILE = "bragg_v2_dabax.dat"
-        tmp = create_bragg_preprocessor_file_v2(interactive=False, DESCRIPTOR="Si", H_MILLER_INDEX=1, K_MILLER_INDEX=1, L_MILLER_INDEX=1,
-              TEMPERATURE_FACTOR=1.0, E_MIN=5000.0, E_MAX=15000.0, E_STEP=100.0, SHADOW_FILE=SHADOW_FILE,
-              material_constants_library=dx)
-
-    else:
-        SHADOW_FILE = "bragg_v2_xraylib.dat"
-        tmp = create_bragg_preprocessor_file_v2(interactive=False, DESCRIPTOR="Si", H_MILLER_INDEX=1,
-                                                               K_MILLER_INDEX=1, L_MILLER_INDEX=1,
-                                                               TEMPERATURE_FACTOR=1.0, E_MIN=5000.0, E_MAX=15000.0,
-                                                               E_STEP=100.0, SHADOW_FILE=SHADOW_FILE,
-                                                               material_constants_library=xraylib)
+        else:
+            SHADOW_FILE = "bragg_v2_xraylib.dat"
+            tmp = create_bragg_preprocessor_file_v2(interactive=False, DESCRIPTOR="Si", H_MILLER_INDEX=1,
+                                                                   K_MILLER_INDEX=1, L_MILLER_INDEX=1,
+                                                                   TEMPERATURE_FACTOR=1.0, E_MIN=5000.0, E_MAX=15000.0,
+                                                                   E_STEP=100.0, SHADOW_FILE=SHADOW_FILE,
+                                                                   material_constants_library=xraylib)
 
 
 
-    tmp1 = bragg_preprocessor_file_v2_read(SHADOW_FILE)
+        tmp1 = bragg_preprocessor_file_v2_read(SHADOW_FILE)
 
-    for key in tmp1.keys():
-        print("---------------", key)
+        for key in tmp1.keys():
+            print("---------------", key)
 
-    for key in tmp.keys():
-        print("---------------", key)
-        oo = tmp[key]
-        try:
-            oo1 = tmp1[key]
-            print(type(oo), type(oo1))
-            if isinstance(oo, list):
-                pass
-                # print(key,oo[0][0],oo1[0][0])
-            elif isinstance(oo, numpy.ndarray):
-                print(key,oo[0][0],oo1[0][0])
-            else:
-                print(key,oo,oo1)
-        except:
-            print("key %s not found " % key)
+        for key in tmp.keys():
+            print("---------------", key)
+            oo = tmp[key]
+            try:
+                oo1 = tmp1[key]
+                print(type(oo), type(oo1))
+                if isinstance(oo, list):
+                    pass
+                    # print(key,oo[0][0],oo1[0][0])
+                elif isinstance(oo, numpy.ndarray):
+                    print(key,oo[0][0],oo1[0][0])
+                else:
+                    print(key,oo,oo1)
+            except:
+                print("key %s not found " % key)
