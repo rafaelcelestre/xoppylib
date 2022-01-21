@@ -269,7 +269,7 @@ def crystal_fh(input_dictionary,phot_in,theta=None,forceratio=0):
             #F0[j] = f0coeff[j,icentral]
             icentral = int(len(f0coeff[j])/2)
             F0[j] = f0coeff[j][icentral]
-            F000[j] = F0[j]
+            # F000[j] = F0[j]
             for i in range(icentral):
                 #F0[j] += f0coeff[j,i] * numpy.exp(-1.0*f0coeff[j,i+icentral+1]*ratio**2)
                 F0[j] += f0coeff[j][i] * numpy.exp(-1.0*f0coeff[j][i+icentral+1]*ratio**2)
@@ -1255,16 +1255,118 @@ def mare_calc(descriptor,H,K,L,HMAX,KMAX,LMAX,FHEDGE,DISPLAY,lambda1,deltalambda
 
     return(list_of_scripts)
 
+
+
+def calc_temperature_factor(temperature, crystal='Si', debyeTemperature=644.92,
+                            millerIndex=[1, 1, 1], atomicMass=28.09,
+                            dSpacing=3.1354162886330583,
+                            material_constants_library=xraylib
+                          ):
+    """
+    Calculates the (Debye) temperature factor for single crystals.
+
+    Parameters
+    ----------
+    temperature : float
+        Crystal temperature in Kelvin (positive number).
+    crystal : str
+        Crystal single-element symbol (e.g. Si, Ge, ...).
+    debyeTemperature : float
+        Debye temperature of the crystal material in Kelvin.
+    millerIndex : array-like (1D), optional
+        Miller indexes of the crystal orientation. For use with xraylib only.
+    atomicMass : float, optional.
+        Atomic mass of the crystal element (amu unit). if atomicMass == 0, get from xraylib.
+    dSpacing : float, optional.
+        dSpacing in Angstroms, given the crystal and millerIndex . if dSpacing == 0, get from xraylib.
+
+    Returns:
+    --------
+    temperatureFactor : float
+
+    Examples:
+    ---------
+        ### using xraylib:
+
+        >>> calc_temperature_factor(80, crystal='Si', millerIndex=[3,1,1], debyeTemperature=644.92, dSpacing=0, atomicMass=0)
+        0.983851994268226
+
+
+        ### forcing it to use given dSpacing and atomicMass:
+
+        >>> calc_temperature_factor(80, crystal='Si', millerIndex=[1,1,1], debyeTemperature=644.92, atomicMass=28.09, dSpacing=3.1354163)
+        0.9955698950510736
+
+    References:
+    -----------
+
+    [1]: A. Freund, Nucl. Instrum. and Meth. 213 (1983) 495-501
+
+    [2]: M. Sanchez del Rio and R. J. Dejus, "Status of XOP: an x-ray optics software toolkit",
+         SPIE proc. vol. 5536 (2004) pp.171-174
+
+    Written: Sergio Lordano, M. Sanchez del Rio based on XOP/IDL routine (2022-01-21)
+    """
+
+    def debyeFunc(x):
+        return x / (numpy.exp(-x) - 1)
+
+    def debyePhi(y):
+        from scipy.integrate import quad
+        integral = quad(lambda x: debyeFunc(x), 0, y)[0]
+        return (1 / y) * integral
+
+    planck = codata.h           # 6.62607015e-34    # codata.Planck
+    Kb = codata.Boltzmann       # 1.380649e-23      # codata.Boltzmann
+    atomicMassTokg = codata.m_u # 1.6605390666e-27  # codata.atomic_mass
+
+    try:
+        h, k, l = millerIndex
+        crystalDict = material_constants_library.Crystal_GetCrystal(crystal)
+        if (dSpacing == 0):
+            dSpacing = material_constants_library.Crystal_dSpacing(crystalDict, h, k, l)
+        if (atomicMass == 0):
+            atomicMass = material_constants_library.AtomicWeight(xraylib.SymbolToAtomicNumber(crystal))
+
+    except:
+        print("material_constants_library not available. Please give dSpacing and atomicMass manually.")
+        if ((dSpacing == 0) or (atomicMass == 0)):
+            return numpy.nan
+
+    atomicMass *= atomicMassTokg  # converting to [kg]
+    dSpacing *= 1e-10  # converting to [m]
+
+    x = debyeTemperature / (-1 * temperature)  # invert temperature sign (!!!)
+
+    B0 = (3 * planck ** 2) / (2 * Kb * debyeTemperature * atomicMass)
+
+    BT = 4 * B0 * debyePhi(x) / x
+
+    ratio = 1 / (2 * dSpacing)
+
+    M = (B0 + BT) * ratio ** 2
+
+    temperatureFactor = numpy.exp(-M)
+
+    return temperatureFactor
+#
+#
+#
+#
+#
+
+
 if __name__ == "__main__":
 
     from dabax.dabax_xraylib import DabaxXraylib
     dx = DabaxXraylib()
 
-    # tmp = bragg_calc(descriptor="Si",hh=1,kk=1,ll=1,temper=1.0,emin=5000.0,emax=15000.0,estep=100.0,
-    #            fileout="bragg_v2_xraylib.dat", material_constants_library=xraylib)
-    #
-    # tmp = bragg_calc(descriptor="Si",hh=1,kk=1,ll=1,temper=1.0,emin=5000.0,emax=15000.0,estep=100.0,
-    #            fileout="bragg_v2_dabax.dat", material_constants_library=dx)
+    if False:
+        tmp = bragg_calc(descriptor="Si",hh=1,kk=1,ll=1,temper=1.0,emin=5000.0,emax=15000.0,estep=100.0,
+                   fileout="bragg_v2_xraylib.dat", material_constants_library=xraylib)
+
+        tmp = bragg_calc(descriptor="Si",hh=1,kk=1,ll=1,temper=1.0,emin=5000.0,emax=15000.0,estep=100.0,
+                   fileout="bragg_v2_dabax.dat", material_constants_library=dx)
 
 
     tmp = bragg_calc2(descriptor="Si",hh=1,kk=1,ll=1,temper=1.0,emin=5000.0,emax=15000.0,estep=100.0,
@@ -1283,8 +1385,23 @@ if __name__ == "__main__":
                 material_constants_library=dx)
 
 
-    # from orangecontrib.xoppy.util.xoppy_xraylib_util import mare_calc as mare_calc_old
-    # m1 = mare_calc_old("Si", 2, 2, 2, 3, 3, 3, 2e-8, 3, 1.54, 0.01, -20.0, 0.1)
-    # m2 = mare_calc("Si", 2, 2, 2, 3, 3, 3, 2e-8, 3, 1.54, 0.01, -20.0, 0.1,
-    #                material_constants_library=dx)
-    # print(m2)
+    if False:
+        from orangecontrib.xoppy.util.xoppy_xraylib_util import mare_calc as mare_calc_old
+        m1 = mare_calc_old("Si", 2, 2, 2, 3, 3, 3, 2e-8, 3, 1.54, 0.01, -20.0, 0.1)
+        m2 = mare_calc("Si", 2, 2, 2, 3, 3, 3, 2e-8, 3, 1.54, 0.01, -20.0, 0.1,
+                       material_constants_library=dx)
+        print(m2)
+
+
+    if True:
+        t1 = calc_temperature_factor(80, crystal='Si', millerIndex=[3, 1, 1], debyeTemperature=644.92, dSpacing=0,
+                                     atomicMass=0)
+
+
+        ### forcing it to use given dSpacing and atomicMass:
+
+        t2 = calc_temperature_factor(80, crystal='Si', millerIndex=[1, 1, 1], debyeTemperature=644.92, atomicMass=28.09,
+                                     dSpacing=3.1354163)
+        print("temperature factor Si: ", t1, t2)
+        assert (numpy.abs(t1 - 0.983851994268226) < 1e-3)
+        assert (numpy.abs(t2 - 0.9955698950510736) < 1e-3)
