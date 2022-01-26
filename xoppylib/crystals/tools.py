@@ -8,6 +8,11 @@ from xoppylib.crystals.bragg_preprocessor_file_io import bragg_preprocessor_file
 from dabax.common_tools import f0_xop, f0_xop_with_fractional_charge
 from dabax.common_tools import bragg_metrictensor, lorentz, atomic_symbols
 
+
+import sys
+import os
+import platform
+from xoppylib.xoppy_util import locations
 #
 #
 #
@@ -34,10 +39,15 @@ def bragg_calc(descriptor="Si",hh=1,kk=1,ll=1,temper=1.0,emin=5000.0,emax=15000.
 
     # f = open(fileout,'w')
 
+    version = "2.5"
+    output_dictionary["version"] = version
+
     # todo: txt not longer used here... can be removed
     txt = ""
     txt += "# Bragg version, Data file type\n"
-    txt += "2.5 1\n"
+    txt += "%s 1\n" % version
+
+
 
     cryst = material_constants_library.Crystal_GetCrystal(descriptor)
 
@@ -46,9 +56,9 @@ def bragg_calc(descriptor="Si",hh=1,kk=1,ll=1,temper=1.0,emin=5000.0,emax=15000.
 
     volume = cryst['volume']
 
-    #test crystal data - not needed
-    itest = 0
-    if itest:
+    # crystal data - not needed
+    icheck = 0
+    if icheck:
 
         print ("  Unit cell dimensions are %f %f %f" % (cryst['a'],cryst['b'],cryst['c']))
         print ("  Unit cell angles are %f %f %f" % (cryst['alpha'],cryst['beta'],cryst['gamma']))
@@ -462,10 +472,13 @@ def bragg_calc2(descriptor="YB66", hh=1, kk=1, ll=1, temper=1.0,
 
     # f = open(fileout,'w')
 
+    version = "2.6"
+    output_dictionary["version"] = version
+
+
     txt = ""
     txt += "# Bragg version, Data file type\n"
-    txt += "2.6 1\n"
-
+    txt += "%s\n" % version
 
     cryst = material_constants_library.Crystal_GetCrystal(descriptor)
 
@@ -475,8 +488,8 @@ def bragg_calc2(descriptor="YB66", hh=1, kk=1, ll=1, temper=1.0,
     volume = cryst['volume']
 
     # test crystal data - not needed
-    itest = 0
-    if itest:
+    icheck= 0
+    if icheck:
         print("  Unit cell dimensions are %f %f %f" % (cryst['a'], cryst['b'], cryst['c']))
         print("  Unit cell angles are %f %f %f" % (cryst['alpha'], cryst['beta'], cryst['gamma']))
         print("  Unit cell volume is %f A^3" % volume)
@@ -740,9 +753,10 @@ def bragg_calc2(descriptor="YB66", hh=1, kk=1, ll=1, temper=1.0,
     output_dictionary["fcompton"] = out_fcompton
 
     if fileout != None:
-        with open(fileout, "w") as f:
-            f.write(txt)
-        if verbose: print("File written to disk: %s" % fileout)
+        bragg_preprocessor_file_v2_write(output_dictionary, fileout)
+        # with open(fileout, "w") as f:
+        #     f.write(txt)
+        # if verbose: print("File written to disk: %s" % fileout)
 
     return output_dictionary
 
@@ -851,7 +865,7 @@ def mare_calc(descriptor,H,K,L,HMAX,KMAX,LMAX,FHEDGE,DISPLAY,lambda1,deltalambda
     cryst = material_constants_library.Crystal_GetCrystal(descriptor)
     # volume = cryst['volume']
     #
-    # #test crystal data - not needed
+    # # crystal data - not needed
     #
     # print ("  Unit cell dimensions are %f %f %f" % (cryst['a'],cryst['b'],cryst['c']))
     # print ("  Unit cell angles are %f %f %f" % (cryst['alpha'],cryst['beta'],cryst['gamma']))
@@ -1354,7 +1368,168 @@ def calc_temperature_factor(temperature, crystal='Si', debyeTemperature=644.92,
 #
 #
 #
+# import sys
+# import os
+# import platform
+# from xoppylib.xoppy_util import locations
+# from xoppylib.crystals.tools import bragg_calc, bragg_calc2
 
+def run_diff_pat(
+    CRYSTAL_DESCRIPTOR = "Si",
+    MILLER_INDEX_H   = 1,
+    MILLER_INDEX_K   = 1,
+    MILLER_INDEX_L   = 1,
+    TEMPER           = 1.0,
+    MOSAIC           = 0,
+    GEOMETRY         = 0,
+    SCAN             = 2,
+    UNIT             = 1,
+    SCANFROM         = -100,
+    SCANTO           = 100,
+    SCANPOINTS       = 200,
+    ENERGY           = 8000.0,
+    ASYMMETRY_ANGLE  = 0.0,
+    THICKNESS        = 0.7,
+    MOSAIC_FWHM      = 0.1,
+    RSAG             = 125.0,
+    RMER             = 1290.0,
+    ANISOTROPY       = 0,
+    POISSON          = 0.22,
+    CUT              = "2 -1 -1 ; 1 1 1 ; 0 0 0",
+    FILECOMPLIANCE   = "mycompliance.dat",
+    material_constants_library=None,
+    ):
+
+    #####################################################################################
+
+    for file in ["diff_pat.dat", "diff_pat.gle", "diff_pat.par", "diff_pat.xop", "xcrystal.bra"]:
+        try:
+            os.remove(os.path.join(locations.home_bin_run(), file))
+        except:
+            pass
+
+    if (GEOMETRY == 1) or (GEOMETRY == 3):
+        if ASYMMETRY_ANGLE == 0.0:
+            print(
+                "xoppy_calc_xcrystal: WARNING: In xcrystal the asymmetry angle is the angle between Bragg planes and crystal surface," +
+                "in BOTH Bragg and Laue geometries.")
+
+    descriptor = CRYSTAL_DESCRIPTOR
+
+    if SCAN == 3:  # energy scan
+        emin = SCANFROM - 1
+        emax = SCANTO + 1
+    else:
+        emin = ENERGY - 100.0
+        emax = ENERGY + 100.0
+
+    print("Using crystal descriptor: ", descriptor)
+
+    bragg_dictionary = bragg_calc2(descriptor=descriptor,
+                                  hh=MILLER_INDEX_H, kk=MILLER_INDEX_K, ll=MILLER_INDEX_L,
+                                  temper=float(TEMPER),
+                                  emin=emin, emax=emax,
+                                  estep=(SCANTO - SCANFROM) / SCANPOINTS, fileout="xcrystal.bra",
+                                  material_constants_library=material_constants_library,
+                                  )
+
+    with open("xoppy.inp", "wt") as f:
+        f.write("xcrystal.bra\n")
+        f.write("%d\n" % MOSAIC)
+        f.write("%d\n" % GEOMETRY)
+
+        if MOSAIC == 1:
+            f.write("%g\n" % MOSAIC_FWHM)
+            f.write("%g\n" % THICKNESS)
+        else:
+            f.write("%g\n" % THICKNESS)
+            f.write("%g\n" % ASYMMETRY_ANGLE)
+
+        scan_flag = 1 + SCAN
+
+        f.write("%d\n" % scan_flag)
+
+        f.write("%19.9f\n" % ENERGY)
+
+        if scan_flag <= 3:
+            f.write("%d\n" % UNIT)
+
+        f.write("%g\n" % SCANFROM)
+        f.write("%g\n" % SCANTO)
+        f.write("%d\n" % SCANPOINTS)
+
+        if MOSAIC > 1:  # bent
+            f.write("%g\n" % RSAG)
+            f.write("%g\n" % RMER)
+            f.write("0\n")
+
+            if ((descriptor == "Si") or (descriptor == "Si2") or (descriptor == "Si_NIST") or (
+                    descriptor == "Ge") or descriptor == "Diamond"):
+                pass
+            else:  # not Si,Ge,Diamond
+                if ((ANISOTROPY == 1) or (ANISOTROPY == 2)):
+                    raise Exception(
+                        "Anisotropy data not available for this crystal. Either use isotropic or use external compliance file. Please change and run again'")
+
+            f.write("%d\n" % ANISOTROPY)
+
+            if ANISOTROPY == 0:
+                f.write("%g\n" % POISSON)
+            elif ANISOTROPY == 1:
+                # elas%crystalindex =  irint('CrystalIndex: 0,1,2=Si,3=Ge,4=Diamond: ')
+                if descriptor == "Si":
+                    f.write("0\n")
+                elif descriptor == "Si2":
+                    f.write("1\n")
+                elif descriptor == "Si_NIST":
+                    f.write("2\n")
+                elif descriptor == "Ge":
+                    f.write("3\n")
+                elif descriptor == "Diamond":
+                    f.write("4\n")
+                else:
+                    raise Exception(
+                        "Cannot calculate anisotropy data for %s this crystal. Use Si, Ge, Diamond." % descriptor)
+
+                f.write("%g\n" % ASYMMETRY_ANGLE)
+                f.write("%d\n" % MILLER_INDEX_H)
+                f.write("%d\n" % MILLER_INDEX_K)
+                f.write("%d\n" % MILLER_INDEX_L)
+            elif ANISOTROPY == 2:
+                # elas%crystalindex =  irint('CrystalIndex: 0,1,2=Si,3=Ge,4=Diamond: ')
+                if descriptor == "Si":
+                    f.write("0\n")
+                elif descriptor == "Si2":
+                    f.write("1\n")
+                elif descriptor == "Si_NIST":
+                    f.write("2\n")
+                elif descriptor == "Ge":
+                    f.write("3\n")
+                elif descriptor == "Diamond":
+                    f.write("4\n")
+                else:
+                    raise Exception(
+                        "Cannot calculate anisotropy data for %s this crystal. Use Si, Ge, Diamond." % descriptor)
+
+                f.write("%g\n" % ASYMMETRY_ANGLE)
+                # TODO: check syntax for CUT: Cut syntax is: valong_X valong_Y valong_Z ; vnorm_X vnorm_Y vnorm_Z ; vperp_x vperp_Y vperp_Z
+                f.write("%s\n" % CUT.split(";")[0])
+                f.write("%s\n" % CUT.split(";")[1])
+                f.write("%s\n" % CUT.split(";")[2])
+            elif ANISOTROPY == 3:
+                f.write("%s\n" % FILECOMPLIANCE)
+
+    if platform.system() == "Windows":
+        command = "\"" + os.path.join(locations.home_bin(), 'diff_pat.exe\" < xoppy.inp')
+    else:
+        command = "'" + os.path.join(locations.home_bin(), 'diff_pat') + "' < xoppy.inp"
+    print("Running command '%s' in directory: %s " % (command, locations.home_bin_run()))
+    print("\n--------------------------------------------------------\n")
+    os.system(command)
+    print("\n--------------------------------------------------------\n")
+
+    return bragg_dictionary
+    #####################################################################################
 
 if __name__ == "__main__":
 

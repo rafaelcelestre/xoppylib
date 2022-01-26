@@ -39,7 +39,7 @@ def bragg_preprocessor_file_v2_write(output_dictionary, fileout=None):
 
     txt = ""
     txt += "# Bragg version, Data file type\n"
-    txt += "2.5 1\n"
+    txt += "%s 1\n" % output_dictionary["version"]
     txt += "# RN = (e^2/(m c^2))/V) [cm^-2], d spacing [cm]\n"
     txt += "%e %e \n" % (output_dictionary["rn"] , output_dictionary["dspacing"])
 
@@ -85,7 +85,8 @@ def bragg_preprocessor_file_v2_write(output_dictionary, fileout=None):
     txt += "# for each type of element-site, the number of f0 coefficients followed by them\n"
     for i in range(len(output_dictionary['f0coeff'])):
         coeff = output_dictionary['f0coeff'][i]
-        txt += ("11 "+"%g "*11+"\n")%(tuple(coeff))
+        nn = len(coeff)
+        txt += ("%d "%(nn)+"%g "*nn+"\n")%(tuple(coeff))
 
 
     txt += "# The number of energy points NPOINT: \n"
