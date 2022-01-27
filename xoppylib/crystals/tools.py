@@ -1375,11 +1375,8 @@ def calc_temperature_factor(temperature, crystal='Si', debyeTemperature=644.92,
 # from xoppylib.crystals.tools import bragg_calc, bragg_calc2
 
 def run_diff_pat(
-    CRYSTAL_DESCRIPTOR = "Si",
-    MILLER_INDEX_H   = 1,
-    MILLER_INDEX_K   = 1,
-    MILLER_INDEX_L   = 1,
-    TEMPER           = 1.0,
+    bragg_dict,
+    preprocessor_file="xcrystal.bra",
     MOSAIC           = 0,
     GEOMETRY         = 0,
     SCAN             = 2,
@@ -1397,12 +1394,36 @@ def run_diff_pat(
     POISSON          = 0.22,
     CUT              = "2 -1 -1 ; 1 1 1 ; 0 0 0",
     FILECOMPLIANCE   = "mycompliance.dat",
-    material_constants_library=None,
+    # material_constants_library=None,
     ):
+
+    # if SCAN == 3:  # energy scan
+    #     emin = SCANFROM - 1
+    #     emax = SCANTO + 1
+    # else:
+    #     emin = ENERGY - 100.0
+    #     emax = ENERGY + 100.0
+    #
+    # print("Using crystal descriptor: ", CRYSTAL_DESCRIPTOR)
+    #
+    # for file in ["xcrystal.bra"]:
+    #     try:
+    #         os.remove(os.path.join(locations.home_bin_run(), file))
+    #     except:
+    #         pass
+    #
+    # bragg_dictionary = bragg_calc2(descriptor=CRYSTAL_DESCRIPTOR,
+    #                               hh=MILLER_INDEX_H, kk=MILLER_INDEX_K, ll=MILLER_INDEX_L,
+    #                               temper=float(TEMPER),
+    #                               emin=emin, emax=emax,
+    #                               estep=(SCANTO - SCANFROM) / SCANPOINTS, fileout="xcrystal.bra",
+    #                               material_constants_library=material_constants_library,
+    #                               )
+
 
     #####################################################################################
 
-    for file in ["diff_pat.dat", "diff_pat.gle", "diff_pat.par", "diff_pat.xop", "xcrystal.bra"]:
+    for file in ["diff_pat.dat", "diff_pat.gle", "diff_pat.par", "diff_pat.xop"]:
         try:
             os.remove(os.path.join(locations.home_bin_run(), file))
         except:
@@ -1414,27 +1435,10 @@ def run_diff_pat(
                 "xoppy_calc_xcrystal: WARNING: In xcrystal the asymmetry angle is the angle between Bragg planes and crystal surface," +
                 "in BOTH Bragg and Laue geometries.")
 
-    descriptor = CRYSTAL_DESCRIPTOR
 
-    if SCAN == 3:  # energy scan
-        emin = SCANFROM - 1
-        emax = SCANTO + 1
-    else:
-        emin = ENERGY - 100.0
-        emax = ENERGY + 100.0
-
-    print("Using crystal descriptor: ", descriptor)
-
-    bragg_dictionary = bragg_calc2(descriptor=descriptor,
-                                  hh=MILLER_INDEX_H, kk=MILLER_INDEX_K, ll=MILLER_INDEX_L,
-                                  temper=float(TEMPER),
-                                  emin=emin, emax=emax,
-                                  estep=(SCANTO - SCANFROM) / SCANPOINTS, fileout="xcrystal.bra",
-                                  material_constants_library=material_constants_library,
-                                  )
 
     with open("xoppy.inp", "wt") as f:
-        f.write("xcrystal.bra\n")
+        f.write("%s\n" % preprocessor_file)
         f.write("%d\n" % MOSAIC)
         f.write("%d\n" % GEOMETRY)
 
@@ -1528,7 +1532,6 @@ def run_diff_pat(
     os.system(command)
     print("\n--------------------------------------------------------\n")
 
-    return bragg_dictionary
     #####################################################################################
 
 if __name__ == "__main__":
