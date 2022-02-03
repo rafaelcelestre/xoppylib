@@ -54,7 +54,7 @@ except AttributeError:
 
 NAME = 'xoppylib'
 
-VERSION = '1.0.4'
+VERSION = '1.0.5'
 ISRELEASED = True
 
 DESCRIPTION = 'XOPPY library'
@@ -71,9 +71,9 @@ LICENSE = 'MIT'
 KEYWORDS = (
     'x-ray'
     'synchrotron radiation',
-    'bending magnet',
+    'materials x-ray optical constants',
     'Insertion devices',
-    'surface metrology',
+    'Optical elements',
     'simulation',
 )
 
@@ -101,6 +101,7 @@ INSTALL_REQUIRES = (
     'oasys-srwpy',
     'pySRU',
     'h5py',
+    'dabax',
 )
 
 SETUP_REQUIRES = (
