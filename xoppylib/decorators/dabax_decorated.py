@@ -6,21 +6,24 @@ from xoppylib.decorators.xoppy_decorator import XoppyDecorator
 
 class DabaxDecorated(DabaxXraylib, XoppyDecorator):
     def __init__(self,
-                 dabax_repository="http://ftp.esrf.eu/pub/scisoft/DabaxFiles/",
+                 dabax_repository=None,
                  file_f0="f0_InterTables.dat",
                  file_f1f2="f1f2_Windt.dat",
                  file_CrossSec="CrossSec_EPDL97.dat",
+                 file_Crystals="Crystals.dat",
                  ):
         DabaxXraylib.__init__(self,
-                           dabax_repository=dabax_repository,
-                           file_f0=file_f0,
-                           file_f1f2=file_f1f2,
-                           file_CrossSec=file_CrossSec)
+                dabax_repository=dabax_repository,
+                file_f0=file_f0,
+                file_f1f2=file_f1f2,
+                file_CrossSec=file_CrossSec,
+                file_Crystals=file_Crystals,
+                              )
 
 
 if __name__ == "__main__":
 
-    dx = DabaxDecorated(dabax_repository="http://ftp.esrf.fr/pub/scisoft/DabaxFiles/")
+    dx = DabaxDecorated()
 
     # print(dx.f1f2_calc("Si", 8000, theta=3.0e-3, F=0, density=None, rough=0.0, verbose=True))
 
