@@ -13,6 +13,7 @@ import sys
 import os
 import platform
 from xoppylib.xoppy_util import locations
+from dabax.dabax_xraylib import DabaxXraylib
 #
 #
 #
@@ -736,18 +737,43 @@ def bragg_calc2(descriptor="YB66", hh=1, kk=1, ll=1, temper=1.0,
     out_f2 = numpy.zeros((len(indices_prototypical), npoint), dtype=float)
     out_fcompton = numpy.zeros((len(indices_prototypical), npoint), dtype=float) # todo: is complex?
 
-    for i in range(npoint):
-        energy = (emin + estep * i)
-        txt += ("%20.11e \n") % (energy)
-        list_energy.append(energy)
+    if isinstance(material_constants_library, DabaxXraylib ):
+        # vectorize with DABAX
+        energies = numpy.zeros(npoint)
+        for i in range(npoint):
+            energies[i] = (emin + estep * i)
 
-        for j,jj in enumerate(indices_prototypical):
-            f1a = material_constants_library.Fi(list_Zatom[jj], energy * 1e-3)
-            f2a = -material_constants_library.Fii(list_Zatom[jj], energy * 1e-3)
-            txt += (" %20.11e %20.11e 1.000 \n") % (f1a, f2a)
-            out_f1[j, i] = f1a
-            out_f2[j, i] = f2a
-            out_fcompton[j, i] = 1.0
+        DABAX_F_RESULTS = []
+        for j, jj in enumerate(indices_prototypical):
+            DABAX_F_RESULTS.append(numpy.array( material_constants_library.FiAndFii(list_Zatom[jj], energies * 1e-3)))
+
+        for i in range(npoint):
+            energy = (emin + estep * i)
+            txt += ("%20.11e \n") % (energy)
+            list_energy.append(energy)
+
+            for j, jj in enumerate(indices_prototypical):
+                f1a =  (DABAX_F_RESULTS[j])[0, i]  # material_constants_library.Fi(list_Zatom[jj], energy * 1e-3)
+                f2a = -(DABAX_F_RESULTS[j])[1, i]  # -material_constants_library.Fii(list_Zatom[jj], energy * 1e-3)
+                txt += (" %20.11e %20.11e 1.000 \n") % (f1a, f2a)
+                out_f1[j, i] = f1a
+                out_f2[j, i] = f2a
+                out_fcompton[j, i] = 1.0
+    else:
+        # make a simple loop with xraylib (fast)
+        for i in range(npoint):
+            energy = (emin + estep * i)
+            txt += ("%20.11e \n") % (energy)
+            list_energy.append(energy)
+
+            for j,jj in enumerate(indices_prototypical):
+                f1a = material_constants_library.Fi(list_Zatom[jj], energy * 1e-3)
+                f2a = -material_constants_library.Fii(list_Zatom[jj], energy * 1e-3)
+                txt += (" %20.11e %20.11e 1.000 \n") % (f1a, f2a)
+                out_f1[j, i] = f1a
+                out_f2[j, i] = f2a
+                out_fcompton[j, i] = 1.0
+
 
     output_dictionary["energy"] = list_energy
     output_dictionary["f1"] = out_f1
