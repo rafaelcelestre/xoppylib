@@ -8,7 +8,7 @@ from dabax.common_tools import f0_xop
 
 # needed by bragg_calc
 from dabax.common_tools import bragg_metrictensor, atomic_symbols
-from xoppylib.crystals.tools import bragg_calc
+from xoppylib.crystals.tools import bragg_calc2
 
 def create_bragg_preprocessor_file_v2(interactive=True,
         DESCRIPTOR="Si", H_MILLER_INDEX=1, K_MILLER_INDEX=1, L_MILLER_INDEX=1, TEMPERATURE_FACTOR=1.0,
@@ -72,7 +72,7 @@ def create_bragg_preprocessor_file_v2(interactive=True,
     # end input section, start calculations
     #
 
-    out_dict = bragg_calc(descriptor=descriptor,
+    out_dict = bragg_calc2(descriptor=descriptor,
                           hh=hh,kk=kk,ll=ll,temper=temper,
                           emin=emin,emax=emax,estep=estep,fileout=fileout,
                           material_constants_library=material_constants_library)

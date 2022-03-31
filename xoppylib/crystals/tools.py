@@ -16,6 +16,8 @@ from xoppylib.xoppy_util import locations
 #
 #
 #
+
+# OBSOLETE.... USE bragg_calc2() INSTEAD!
 def bragg_calc(descriptor="Si",hh=1,kk=1,ll=1,temper=1.0,emin=5000.0,emax=15000.0,estep=100.0,fileout=None,
                material_constants_library=xraylib):
     """
@@ -639,8 +641,8 @@ def bragg_calc2(descriptor="YB66", hh=1, kk=1, ll=1, temper=1.0,
     txt += "# for each element-site, the number of scattering electrons (Z_i + charge_i)\n"
     atnum_list = []
     for i in indices_prototypical:
-        txt += "%f " % (list_Zatom[i] + list_charge[i])
-        atnum_list.append(list_Zatom[i] + list_charge[i])
+        txt += "%f " % (list_Zatom[i] - list_charge[i])
+        atnum_list.append(list_Zatom[i] - list_charge[i])
     txt += "\n"
     output_dictionary["atnum"] = atnum_list
 
@@ -740,8 +742,8 @@ def bragg_calc2(descriptor="YB66", hh=1, kk=1, ll=1, temper=1.0,
         list_energy.append(energy)
 
         for j,jj in enumerate(indices_prototypical):
-            f1a = xraylib.Fi(list_Zatom[jj], energy * 1e-3)
-            f2a = -xraylib.Fii(list_Zatom[jj], energy * 1e-3)  # TODO: check the sign!!
+            f1a = material_constants_library.Fi(list_Zatom[jj], energy * 1e-3)
+            f2a = -material_constants_library.Fii(list_Zatom[jj], energy * 1e-3)
             txt += (" %20.11e %20.11e 1.000 \n") % (f1a, f2a)
             out_f1[j, i] = f1a
             out_f2[j, i] = f2a
