@@ -6,8 +6,8 @@ import numpy
 import scipy.constants as codata
 import h5py
 import xraylib
-from orangecontrib.xoppy.util.xoppy_xraylib_util import reflectivity_fresnel
-from orangecontrib.xoppy.util.xoppy_xraylib_util import nist_compound_list, density
+from xoppylib.xoppy_xraylib_util import reflectivity_fresnel
+from xoppylib.xoppy_xraylib_util import nist_compound_list, density
 from scipy.interpolate import interp2d, RectBivariateSpline
 from srxraylib.util.h5_simple_writer import H5SimpleWriter
 

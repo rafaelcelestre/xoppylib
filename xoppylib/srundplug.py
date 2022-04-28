@@ -86,13 +86,13 @@ m2ev = codata.c * codata.h / codata.e      # lambda(m)  = m2eV / energy(eV)
 scanCounter = 0
 
 # try:
-#     from orangecontrib.xoppy.util.xoppy_util import locations
+#     from xoppylib.xoppy_util import locations
 # except:
 #     raise Exception("IMPORT")
 
 # directory  where to find urgent and us binaries
 try:
-    from orangecontrib.xoppy.util.xoppy_util import locations
+    from xoppylib.xoppy_util import locations
     home_bin = locations.home_bin()
 except:
     import platform

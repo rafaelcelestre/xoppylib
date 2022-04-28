@@ -6,8 +6,8 @@ import numpy
 import os
 from collections import OrderedDict
 
-from orangecontrib.xoppy.util import srundplug
-from orangecontrib.xoppy.util.fit_gaussian2d import fit_gaussian2d, info_params, twoD_Gaussian
+from xoppylib import srundplug
+from xoppylib.fit_gaussian2d import fit_gaussian2d, info_params, twoD_Gaussian
 
 from srxraylib.util.h5_simple_writer import H5SimpleWriter
 

@@ -135,9 +135,9 @@ def ray_tracing(
             OE_IMAGE:     list[oe_index]  ndarray(3, 2709)   (shadow: col2,col1,col23)
     """
 
-    from orangecontrib.xoppy.util.srcalc.beam import Beam
-    from orangecontrib.xoppy.util.srcalc.conic import Conic
-    from orangecontrib.xoppy.util.srcalc.toroid import Toroid
+    from xoppylib.srcalc.beam import Beam
+    from xoppylib.srcalc.conic import Conic
+    from xoppylib.srcalc.toroid import Toroid
 
     # from shadow4.beam.beam import Beam
     # from shadow4.optical_surfaces.conic import Conic

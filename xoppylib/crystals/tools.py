@@ -1592,7 +1592,7 @@ if __name__ == "__main__":
 
 
     if False:
-        from orangecontrib.xoppy.util.xoppy_xraylib_util import mare_calc as mare_calc_old
+        from xoppylib.xoppy_xraylib_util import mare_calc as mare_calc_old
         m1 = mare_calc_old("Si", 2, 2, 2, 3, 3, 3, 2e-8, 3, 1.54, 0.01, -20.0, 0.1)
         m2 = mare_calc("Si", 2, 2, 2, 3, 3, 3, 2e-8, 3, 1.54, 0.01, -20.0, 0.1,
                        material_constants_library=dx)

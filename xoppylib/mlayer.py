@@ -20,7 +20,7 @@ tocm = codata.h*codata.c/codata.e*1e2 # 12398.419739640718e-8
 from srxraylib.util.h5_simple_writer import H5SimpleWriter
 
 # retrieve a bind of xraylib refractive index that accept NIST compounds
-from orangecontrib.xoppy.util.xoppy_xraylib_util import density, Refractive_Index_Re, Refractive_Index_Im
+from xoppylib.xoppy_xraylib_util import density, Refractive_Index_Re, Refractive_Index_Im
 
 class MLayer(object):
 

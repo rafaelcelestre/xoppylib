@@ -9,7 +9,7 @@ from scipy.interpolate import interp1d
 from scipy.integrate import cumtrapz
 import scipy.constants as codata
 
-from orangecontrib.xoppy.util.fit_gaussian2d import fit_gaussian2d, info_params, twoD_Gaussian
+from xoppylib.fit_gaussian2d import fit_gaussian2d, info_params, twoD_Gaussian
 
 from oasys.util.oasys_util import get_fwhm
 
@@ -631,7 +631,7 @@ if __name__ == "__main__":
     # # script to make the calculations (created by XOPPY:wiggler_radiation)
     # #
     #
-    # from orangecontrib.xoppy.util.xoppy_bm_wiggler import xoppy_calc_wiggler_radiation
+    # from xoppylib.xoppy_bm_wiggler import xoppy_calc_wiggler_radiation
     #
     # h5_parameters = dict()
     # h5_parameters["ELECTRONENERGY"] = 6.0
