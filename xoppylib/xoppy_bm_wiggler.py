@@ -56,27 +56,45 @@ def xoppy_calc_bm(MACHINE_NAME="ESRF bending magnet",RB_CHOICE=0,MACHINE_R_M=25.
                                 psi_min=PSI_MIN, psi_max=PSI_MAX, psi_npoints=PSI_NPOINTS)
 
         if VER_DIV == 0:
-            coltitles=['Photon Energy [eV]','Photon Wavelength [A]','E/Ec','Flux_spol/Flux_total','Flux_ppol/Flux_total','Flux[Phot/sec/0.1%bw]','Power[Watts/eV]']
+            coltitles=['Photon Energy [eV]','Photon Wavelength [A]','E/Ec','Flux_spol/Flux_total','Flux_ppol/Flux_total','Flux[Phot/s/0.1%bw]','Power[W/eV]','CumulatedPower[W]']
             title='integrated in Psi,'
         if VER_DIV == 1:
-            coltitles=['Photon Energy [eV]','Photon Wavelength [A]','E/Ec','Flux_spol/Flux_total','Flux_ppol/Flux_total','Flux[Phot/sec/0.1%bw/mrad(Psi)]','Power[Watts/eV/mrad(Psi)]']
+            coltitles=['Photon Energy [eV]','Photon Wavelength [A]','E/Ec','Flux_spol/Flux_total','Flux_ppol/Flux_total','Flux[Phot/s/0.1%bw/mrad(Psi)]','Power[W/eV/mrad(Psi)]','CumulatedPower[W/mrad(Psi)]']
             title='at Psi=0,'
         if VER_DIV == 2:
-            coltitles=['Photon Energy [eV]','Photon Wavelength [A]','E/Ec','Flux_spol/Flux_total','Flux_ppol/Flux_total','Flux[Phot/sec/0.1%bw]','Power[Watts/eV]']
+            coltitles=['Photon Energy [eV]','Photon Wavelength [A]','E/Ec','Flux_spol/Flux_total','Flux_ppol/Flux_total','Flux[Phot/s/0.1%bw]','Power[W/eV]','CumulatedPower[W]']
             title='in Psi=[%e,%e]'%(PSI_MIN,PSI_MAX)
         if VER_DIV == 3:
-            coltitles=['Photon Energy [eV]','Photon Wavelength [A]','E/Ec','Flux_spol/Flux_total','Flux_ppol/Flux_total','Flux[Phot/sec/0.1%bw/mrad(Psi)]','Power[Watts/eV/mrad(Psi)]']
+            coltitles=['Photon Energy [eV]','Photon Wavelength [A]','E/Ec','Flux_spol/Flux_total','Flux_ppol/Flux_total','Flux[Phot/s/0.1%bw/mrad(Psi)]','Power[W/eV/mrad(Psi)]','CumulatedPower[W/mrad(Psi)]']
             title='at Psi=%e mrad'%(PSI_MIN)
 
-        a6=numpy.zeros((7,len(energy_ev)))
+        a6=numpy.zeros((8,len(energy_ev)))
         a1 = energy_ev
-        a6[0,:] = (a1)
-        a6[1,:] = srfunc.m2ev * 1e10 / (a1)
-        a6[2,:] = (a1)/ec_ev # E/Ec
-        a6[3,:] = numpy.array(a5par)/numpy.array(a5)
-        a6[4,:] = numpy.array(a5per)/numpy.array(a5)
-        a6[5,:] = numpy.array(a5)
-        a6[6,:] = numpy.array(a5)*1e3 * srfunc.codata_ec
+        spectral_power = numpy.array(a5)*1e3 * srfunc.codata_ec
+
+        # calculate cumulated power
+        if VER_DIV in [0,2]:
+            cumulated_power_unit = 'W'
+        else:
+            cumulated_power_unit = 'W/mrad(Psi)'
+        if LOG_CHOICE == 0:
+            cumulated_power = spectral_power.cumsum() * numpy.abs(energy_ev[0] - energy_ev[1])
+            # print("\nPower from integral of spectrum (sum rule): %8.3f %s" % (cumulated_power[-1], cumulated_power_unit))
+            print("\nPower from integral of spectrum (trapz rule): %8.3f %s" % (numpy.trapz(spectral_power, energy_ev), cumulated_power_unit))
+        else:
+            cumulated_power = numpy.zeros_like(energy_ev)
+            for i in range(1, energy_ev.size):
+                cumulated_power[i] = cumulated_power[i-1] + numpy.abs( spectral_power[i] * (energy_ev[i] - energy_ev[i-1]))
+            print("\nPower from integral of spectrum (sum rule, WARNING: energy in LOG): %8.3f %s" % (cumulated_power[-1], cumulated_power_unit))
+
+        a6[0, :] = (a1)
+        a6[1, :] = srfunc.m2ev * 1e10 / (a1)
+        a6[2, :] = (a1)/ec_ev # E/Ec
+        a6[3, :] = numpy.array(a5par)/numpy.array(a5)
+        a6[4, :] = numpy.array(a5per)/numpy.array(a5)
+        a6[5, :] = numpy.array(a5)
+        a6[6, :] = spectral_power
+        a6[7, :] = cumulated_power
 
     if TYPE_CALC == 1:  # angular distributions over over all energies
         angle_mrad = numpy.linspace(-PSI_MRAD_PLOT, +PSI_MRAD_PLOT,NPOINTS) # angle grid
@@ -154,9 +172,9 @@ def xoppy_calc_bm(MACHINE_NAME="ESRF bending magnet",RB_CHOICE=0,MACHINE_R_M=25.
         f.close()
         print("File written to disk: " + outFile)
 
-    if TYPE_CALC == 0:
-        if LOG_CHOICE == 0:
-            print("\nPower from integral of spectrum: %15.3f W"%(a5.sum() * 1e3*srfunc.codata_ec * (energy_ev[1]-energy_ev[0])))
+    # if TYPE_CALC == 0:
+    #     if LOG_CHOICE == 0:
+    #         print("\nPower from integral of spectrum: %15.3f W"%(a5.sum() * 1e3*srfunc.codata_ec * (energy_ev[1]-energy_ev[0])))
 
     return a6.T, fm, a, energy_ev
 
