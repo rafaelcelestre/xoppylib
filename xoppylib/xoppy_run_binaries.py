@@ -5,7 +5,6 @@ from xoppylib.xoppy_util import locations
 import numpy
 import scipy.constants as codata
 
-
 #
 # WS
 #
@@ -601,45 +600,271 @@ def xoppy_calc_black_body(
     NPOINTS     = 500,
     ):
 
-    if True:
+    #
+    # text info
+    #
+    kb = codata.Boltzmann / codata.e # eV/K
+    txt = ' \n'
+    txt += 'Results of Black Body Radiation: Planck distribution\n'
+    txt += 'TITLE: %s'%TITLE
+    txt += ' \n'
+    txt += '-------------------------------------------------------------\n'
+    txt += 'Temperature           = %g K\n'%(TEMPERATURE)
+    txt += 'Minimum photon energy = %g eV\n'%(E_MIN)
+    txt += 'Maximum photon energy = %g eV\n'%(E_MAX)
+    txt += '-------------------------------------------------------------\n'
+    txt += 'Kb*T                = %g eV\n'%(TEMPERATURE*kb)
+    txt += 'Peak at 2.822*Kb*T  = %g eV\n'%(2.822*TEMPERATURE*kb)
+    txt += '-------------------------------------------------------------\n'
 
-        import scipy.constants as codata
+    # print(txt)
 
-        #
-        # text info
-        #
-        kb = codata.Boltzmann / codata.e # eV/K
-        txt = ' \n'
-        txt += 'Results of Black Body Radiation: Planck distribution\n'
-        txt += 'TITLE: %s'%TITLE
-        txt += ' \n'
-        txt += '-------------------------------------------------------------\n'
-        txt += 'Temperature           = %g K\n'%(TEMPERATURE)
-        txt += 'Minimum photon energy = %g eV\n'%(E_MIN)
-        txt += 'Maximum photon energy = %g eV\n'%(E_MAX)
-        txt += '-------------------------------------------------------------\n'
-        txt += 'Kb*T                = %g eV\n'%(TEMPERATURE*kb)
-        txt += 'Peak at 2.822*Kb*T  = %g eV\n'%(2.822*TEMPERATURE*kb)
-        txt += '-------------------------------------------------------------\n'
+    #
+    # calculation data
+    #
+    e_ev = numpy.linspace(E_MIN,E_MAX,NPOINTS)
+    e_kt = e_ev/(TEMPERATURE*kb)
+    brightness=3.146e11*(TEMPERATURE*kb)**3*e_kt**3/(numpy.exp(e_kt)-1)
+    a3 = numpy.zeros((4,NPOINTS))
+    a3[0,:] = e_ev
+    a3[1,:] = e_kt
+    a3[2,:] = brightness
+    a3[3,:] = brightness*1e3*codata.e
 
-        # print(txt)
+    labels = ["Photon energy [eV]","Photon energy/(Kb*T)", "Brightness [Photons/sec/mm2/mrad2/0.1%bw]", "Spectral Power [Watts/eV/mrad2/mm2]"]
 
-        #
-        # calculation data
-        #
-        e_ev = numpy.linspace(E_MIN,E_MAX,NPOINTS)
-        e_kt = e_ev/(TEMPERATURE*kb)
-        brightness=3.146e11*(TEMPERATURE*kb)**3*e_kt**3/(numpy.exp(e_kt)-1)
-        a3 = numpy.zeros((4,NPOINTS))
-        a3[0,:] = e_ev
-        a3[1,:] = e_kt
-        a3[2,:] = brightness
-        a3[3,:] = brightness*1e3*codata.e
-
-        labels = ["Photon energy [eV]","Photon energy/(Kb*T)", "Brightness [Photons/sec/mm2/mrad2/0.1%bw]", "Spectral Power [Watts/eV/mrad2/mm2]"]
-
-        return {"application":"xoppy","name":"black_body","data":a3.T,"labels":labels,"info":txt}
+    return {"application":"xoppy","name":"black_body","data":a3.T,"labels":labels,"info":txt}
 
 
-    # except Exception as e:
-    #     raise e
+#
+# inpro
+#
+
+def xoppy_calc_inpro(CRYSTAL_MATERIAL=0,MODE=0,ENERGY=8000.0,MILLER_INDEX_H=1,MILLER_INDEX_K=1,MILLER_INDEX_L=1,\
+                      ASYMMETRY_ANGLE=0.0,THICKNESS=500.0,TEMPERATURE=300.0,NPOINTS=100,SCALE=0,XFROM=-50.0,XTO=50.0):
+    print("Inside xoppy_calc_xinpro. ")
+
+    try:
+        with open("xoppy.inp", "wt") as f:
+            f.write("%s\n"% (os.path.join(locations.home_data(), "inpro" + os.sep)))
+            if MODE == 0:
+                f.write("+1\n")
+            elif MODE == 1:
+                f.write("-1\n")
+            elif MODE == 2:
+                f.write("+2\n")
+            elif MODE == 3:
+                f.write("-1\n")
+            else:
+                f.write("ERROR!!\n")
+
+            f.write("%f\n%d\n"%(THICKNESS,CRYSTAL_MATERIAL+1))
+            f.write("%s\n%f\n"%("EV",ENERGY))
+            f.write("%d\n%d\n%d\n"%(MILLER_INDEX_H,MILLER_INDEX_K,MILLER_INDEX_L))
+            f.write("%f\n%f\n%s\n"%(ASYMMETRY_ANGLE,TEMPERATURE, "inpro.dat"))
+            if SCALE == 0:
+                f.write("1\n")
+            else:
+                f.write("%d\n%f\n%f\n"%(2,XFROM,XTO))
+            f.write("%d\n"%(NPOINTS))
+
+
+        for file in ["inpro.par","inpro.dat","inpro.spec"]:
+            try:
+                os.remove(os.path.join(locations.home_bin_run(),file))
+            except:
+                pass
+
+
+        if platform.system() == "Windows":
+            command = "\"" + os.path.join(locations.home_bin(),'inpro.exe\" < xoppy.inp')
+        else:
+            command = "'" + os.path.join(locations.home_bin(), 'inpro') + "' < xoppy.inp"
+        print("Running command '%s' in directory: %s "%(command, locations.home_bin_run()))
+        print("\n--------------------------------------------------------\n")
+        os.system(command)
+        print("\n--------------------------------------------------------\n")
+
+        #add SPEC header
+        txt = open("inpro.dat").read()
+        outFile = "inpro.spec"
+
+        f = open(outFile,"w")
+        f.write("#F inpro.spec\n")
+        f.write("\n")
+        f.write("#S 1 inpro results\n")
+        f.write("#N 3\n")
+        f.write("#L Theta-TetaB  s-polarized reflectivity  p-polarized reflectivity\n")
+        f.write(txt)
+        f.close()
+        print("File written to disk: inpro.dat, inpro.par, inpro.spec")
+
+        #show calculated parameters in standard output
+        txt_info = open("inpro.par").read()
+        for line in txt_info:
+            print(line,end="")
+
+
+        return outFile
+    except Exception as e:
+        raise e
+
+#
+# xcom
+#
+
+
+def xoppy_calc_xcom(NAME="Pyrex Glass",SUBSTANCE=3,DESCRIPTION="SiO2:B2O3:Na2O:Al2O3:K2O",\
+                     FRACTION="0.807:0.129:0.038:0.022:0.004",GRID=1,GRIDINPUT=0,\
+                     GRIDDATA="0.0804:0.2790:0.6616:1.3685:2.7541",ELEMENTOUTPUT=0):
+    print("Inside xoppy_calc_xxcom. ")
+
+    try:
+        with open("xoppy.inp","wt") as f:
+            f.write(os.path.join(locations.home_data(), 'xcom')+ os.sep + "\n" )
+            f.write( NAME+"\n" )
+            f.write("%d\n"%(1+SUBSTANCE))
+            if (1+SUBSTANCE) != 4:
+                f.write( DESCRIPTION+"\n")
+                if (1+SUBSTANCE) <= 2:
+                    f.write("%d\n"%(1+ELEMENTOUTPUT))
+            else:
+                nn = DESCRIPTION.split(":")
+                mm = FRACTION.split(":")
+                f.write("%d\n"%( len(nn)))
+                for i in range(len(nn)):
+                    f.write(nn[i]+"\n")
+                    f.write(mm[i]+"\n")
+                f.write("1\n")
+            f.write("%d\n"%(1+GRID))
+            if (1+GRID) != 1:
+                f.write("%d\n"%(1+GRIDINPUT))
+                if (1+GRIDINPUT) == 1:
+                    nn = GRIDDATA.split(":")
+                    f.write("%d\n"%( len(nn)))
+                    for i in nn:
+                        f.write(i+"\n")
+                    if (1+GRID) != 1:
+                        f.write("N\n")
+            f.write("xcom.out\n")
+            f.write("1\n")
+            f.close()
+
+        if platform.system() == "Windows":
+            command = "\"" + os.path.join(locations.home_bin(),'xcom.exe\" < xoppy.inp')
+        else:
+            command = "'" + os.path.join(locations.home_bin(),'xcom') + "' < xoppy.inp"
+        print("Running command '%s' in directory: %s "%(command,locations.home_bin_run()))
+        print("\n--------------------------------------------------------\n")
+        os.system(command)
+        print("\n--------------------------------------------------------\n")
+        # write spec file
+
+        if (1+SUBSTANCE) <= 2:
+            if (1+ELEMENTOUTPUT) == 1:
+                titles = "Photon Energy [Mev]  Coherent scat [b/atom]  " \
+                         "Incoherent scat [b/atom]  Photoel abs [b/atom]  " \
+                         "Pair prod in nucl field [b/atom]  Pair prod in elec field [b/atom]  " \
+                         "Tot atten with coh scat [b/atom]  Tot atten w/o coh scat [b/atom]"
+            elif (1+ELEMENTOUTPUT) == 2:
+                titles = "Photon Energy [Mev]  Coherent scat [b/atom]  " \
+                         "Incoherent scat [b/atom]  Photoel abs [b/atom]  " \
+                         "Pair prod in nucl field [b/atom]  Pair prod in elec field [b/atom]  " \
+                         "Tot atten with coh scat [cm2/g]  Tot atten w/o coh scat [cm2/g]"
+            elif (1+ELEMENTOUTPUT) == 3:
+                titles = "Photon Energy [Mev]  Coherent scat [cm2/g]  " \
+                         "Incoherent scat [cm2/g]  Photoel abs [cm2/g]  " \
+                         "Pair prod in nucl field [cm2/g]  Pair prod in elec field [cm2/g]  " \
+                         "Tot atten with coh scat [cm2/g]  Tot atten w/o coh scat [cm2/g]"
+            else:
+                titles = "Photon Energy [Mev]  Coherent scat [cm2/g]  " \
+                         "Incoherent scat [cm2/g]  Photoel abs [cm2/g]  " \
+                         "Pair prod in nucl field [cm2/g]  Pair prod in elec field [cm2/g]  " \
+                         "Tot atten with coh scat [cm2/g]  Tot atten w/o coh scat [cm2/g]"
+        else:
+           titles = "Photon Energy [Mev]  Coherent scat [cm2/g]  " \
+                    "Incoherent scat [cm2/g]  Photoel abs [cm2/g]  " \
+                    "Pair prod in nucl field [cm2/g]  Pair prod in elec field [cm2/g]  " \
+                    "Tot atten with coh scat [cm2/g]  Tot atten w/o coh scat [cm2/g]"
+
+
+        txt = open("xcom.out").readlines()
+
+        # copy to standard output
+        for line in txt:
+            print(line,end="")
+
+        outFile = "xcom.spec"
+
+        f = open(outFile, "w")
+
+        f.write("#F xcom.spec\n")
+        f.write("\n")
+        f.write("#S 1 xcom results\n")
+        f.write("#N 8\n")
+        f.write("#L  "+titles+"\n")
+        for i in txt:
+            tmp = i.strip(" ")
+            if tmp[0].isdigit():
+               f.write(tmp)
+            else:
+               f.write("#UD "+tmp)
+        f.close()
+        print("File written to disk: xcom.spec")
+
+        return outFile
+    except Exception as e:
+        raise e
+
+#
+# powder_fml
+#
+
+def xoppy_calc_powder_fml(
+    FILE   = os.path.join(locations.home_data(), "cif" + os.sep + "icsd_31142_sepiolite_BraunerPreisinger.cif"),
+    TITLE  = "powder pattern using crysFML",
+    LAMBDA = 1.54056,
+    JOB    = 0,
+    U      = 0.0002,
+    V      = -0.0002,
+    W      = 0.012,
+    X      = 0.0019,
+    LS     = 1900.0,
+    THMIN  = 1.0,
+    STEP   = 0.05,
+    THMAX  = 135.0,
+    ):
+
+    files = ["xpowder_fml.par","xpowder_fml.ref","xpowder_fml.out"]
+    for file in files:
+        try:
+            os.remove(os.path.join(locations.home_bin_run(),file))
+        except:
+            pass
+
+    with open("xoppy.inp", "wt") as f:
+        f.write("%s\n" % (FILE))
+        f.write("%s\n" % (TITLE))
+        f.write("%g\n" % (LAMBDA))
+        f.write("%s\n" % (JOB))
+        f.write("%g\n" % (U))
+        f.write("%g\n" % (V))
+        f.write("%g\n" % (W))
+        f.write("%g\n" % (X))
+        f.write("%g\n" % (LS))
+        f.write("%g\n" % (THMIN))
+        f.write("%g\n" % (STEP))
+        f.write("%s\n" % (THMAX))
+
+    if platform.system() == "Windows":
+        command = "\"" + os.path.join(locations.home_bin(),'xpowder_fml.exe\" < xoppy.inp')
+    else:
+        command = "'" + os.path.join(locations.home_bin(), 'xpowder_fml') + "' < xoppy.inp"
+    print("Running command '%s' in directory: %s "%(command, locations.home_bin_run()))
+    print("\n--------------------------------------------------------\n")
+    os.system(command)
+    print("\n--------------------------------------------------------\n")
+
+    print("Files written to disk:\n    xpowder_fml.par (text output)\n    xpowder_fml.ref (reflections)\n    xpowder_fml.out (diffractogram)",)
+
+    return files
