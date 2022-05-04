@@ -553,6 +553,7 @@ def xoppy_calc_xtube_w(VOLTAGE=100.0,RIPPLE=0.0,AL_FILTER=0.0):
         os.system(command)
         print("\n--------------------------------------------------------\n")
 
+        print("\nOutput file: %s/tasmip_tmp.dat\n" % (locations.home_bin_run()))
         return "tasmip_tmp.dat"
     except Exception as e:
         raise e
@@ -581,6 +582,7 @@ def xoppy_calc_xtubes(ITUBE=0,VOLTAGE=30.0):
         os.system(command)
         print("\n--------------------------------------------------------\n")
 
+        print("\nOutput file: %s/xtubes_tmp.dat\n" % (locations.home_bin_run()))
         return os.path.join(locations.home_bin_run(), "xtubes_tmp.dat")
     except Exception as e:
         raise e

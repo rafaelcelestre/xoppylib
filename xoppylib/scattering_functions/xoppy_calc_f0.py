@@ -1,22 +1,19 @@
-#
-# file to be removed: copied to xoppy_calc_f0 (for uniformity)
-#
-
 import numpy
 from dabax.common_tools import calculate_f0_from_f0coeff, atomic_number, atomic_symbols
 
 from dabax.dabax_xraylib import DabaxXraylib
 import xraylib
 
-def f0_calc(
-            MAT_FLAG,
-            DESCRIPTOR,
-            GRIDSTART,
-            GRIDEND,
-            GRIDN,
-            FILE_NAME="",
-            charge=0.0,
-            material_constants_library=None,
+def xoppy_calc_f0(
+        descriptor   = "Si",
+        MAT_FLAG     = 0,
+        GRIDSTART    = 0.0,
+        GRIDEND      = 8.0,
+        GRIDN        = 100,
+        DUMP_TO_FILE = 0,
+        FILE_NAME    = "f0.dat",
+        CHARGE       = 0.0,
+        material_constants_library = None,
             ):
 
     qscale = numpy.linspace(GRIDSTART, GRIDEND, GRIDN)
@@ -24,26 +21,24 @@ def f0_calc(
     f0 = numpy.zeros_like(qscale)
 
     if MAT_FLAG == 0: # element
-        descriptor = DESCRIPTOR
-        # for i,iqscale in enumerate(qscale):
         Z = atomic_number(descriptor)
         if isinstance(material_constants_library, DabaxXraylib):
-            coeffs = material_constants_library.f0_with_fractional_charge(Z, charge=charge)
+            coeffs = material_constants_library.f0_with_fractional_charge(Z, charge=CHARGE)
             f0 = calculate_f0_from_f0coeff(coeffs, qscale)
         else:
             for i in range(qscale.size):
                 f0[i] = material_constants_library.FF_Rayl(Z, qscale[i])
 
     elif MAT_FLAG == 1: # formula
-        tmp = material_constants_library.CompoundParser(DESCRIPTOR)
+        tmp = material_constants_library.CompoundParser(descriptor)
         zetas = tmp["Elements"]
         multiplicity = tmp["nAtoms"]
         if isinstance(material_constants_library, DabaxXraylib):
             for j ,jz in enumerate(zetas):
-                coeffs = material_constants_library.f0_with_fractional_charge(jz, charge=charge)
+                coeffs = material_constants_library.f0_with_fractional_charge(jz, charge=CHARGE)
                 f0 += multiplicity[j] * calculate_f0_from_f0coeff(coeffs, qscale)
         else:
-            if charge != 0:
+            if CHARGE != 0:
                 raise Exception(NotImplementedError)
 
             for i in range(qscale.size):
@@ -54,7 +49,7 @@ def f0_calc(
         if isinstance(material_constants_library, DabaxXraylib):
             raise Exception(NotImplementedError)  # TODO: implement
         else:
-            Zarray = material_constants_library.GetCompoundDataNISTByName(DESCRIPTOR)
+            Zarray = material_constants_library.GetCompoundDataNISTByName(descriptor)
             zetas = Zarray["Elements"]
             fractions = numpy.array(Zarray["massFractions"])
 
@@ -72,7 +67,7 @@ def f0_calc(
                 atwt += multiplicity[i] * material_constants_library.AtomicWeight(Z)
 
             print("f0_calc - nist: ")
-            print("    Descriptor: ", DESCRIPTOR)
+            print("    Descriptor: ", descriptor)
             print("    Zs: ", zetas)
             print("    n: ", multiplicity)
             print("    atomic weight: ", atwt)
@@ -83,9 +78,9 @@ def f0_calc(
 
 
     else:
-        raise Exception("Not implemented")
+        raise Exception("Not implemented MAT_FLAG=%d" % MAT_FLAG)
 
-    if FILE_NAME != "":
+    if DUMP_TO_FILE:
         with open(FILE_NAME, "w") as file:
             try:
                 file.write("#F %s\n " %FILE_NAME)
@@ -109,12 +104,11 @@ def f0_calc(
 if __name__ == "__main__":
 
 
-    dx = DabaxXraylib()
-    Si_xrl = f0_calc(0, "Si", 0, 6, 100, material_constants_library=xraylib)
-    Si_dbx =   f0_calc(0, "Si", 0, 6, 100, material_constants_library=dx)
-
-    H2O_xrl = f0_calc(1, "H2O", 0, 6, 100, material_constants_library=xraylib)
-    H2O_dbx = f0_calc(1, "H2O", 0, 6, 100, material_constants_library=dx)
+    dx = DabaxXraylib(file_f0="f0_InterTables.dat")
+    Si_xrl = xoppy_calc_f0  (MAT_FLAG=0, descriptor="Si",  GRIDSTART=0, GRIDEND=6, GRIDN=100, material_constants_library=xraylib)
+    Si_dbx =   xoppy_calc_f0(MAT_FLAG=0, descriptor="Si",  GRIDSTART=0, GRIDEND=6, GRIDN=100, material_constants_library=dx)
+    H2O_xrl = xoppy_calc_f0 (MAT_FLAG=1, descriptor="H2O", GRIDSTART=0, GRIDEND=6, GRIDN=100, material_constants_library=xraylib)
+    H2O_dbx = xoppy_calc_f0 (MAT_FLAG=1, descriptor="H2O", GRIDSTART=0, GRIDEND=6, GRIDN=100, material_constants_library=dx)
     #
     # H2O_xrl = XraylibDecorated.f0_calc(2, "Water, Liquid", 0, 6, 100)
     # H2O_dbx = DabaxDecorated.f0_calc(2, "Water, Liquid", 0, 6, 100)
