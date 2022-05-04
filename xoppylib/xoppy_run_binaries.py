@@ -748,7 +748,7 @@ def xoppy_calc_xcom(NAME="Pyrex Glass",SUBSTANCE=3,DESCRIPTION="SiO2:B2O3:Na2O:A
                         f.write(i+"\n")
                     if (1+GRID) != 1:
                         f.write("N\n")
-            f.write("xcom.out\n")
+            f.write("%s\n" % GRIDDATA)
             f.write("1\n")
             f.close()
 

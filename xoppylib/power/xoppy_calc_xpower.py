@@ -100,9 +100,11 @@ def xpower_calc(energies=numpy.linspace(1000.0,50000.0,100), source=numpy.ones(1
 
             outArray = numpy.vstack((outArray,trans))
             outColTitles.append("[oe %i] Transmitivity "% (1+i))
+
             outArray = numpy.vstack((outArray,1.0-trans))
             outColTitles.append("[oe %i] Absorption "% (1+i))
 
+            absorbed = cumulated * (1.0-trans)
             cumulated *= trans
 
         if flags[i] == 1: # mirror
@@ -127,9 +129,11 @@ def xpower_calc(energies=numpy.linspace(1000.0,50000.0,100), source=numpy.ones(1
                                         photon_energy_ev=energies)
             outArray = numpy.vstack((outArray,rs))
             outColTitles.append("[oe %i] Reflectivity-s"%(1+i))
+
             outArray = numpy.vstack((outArray,1.0-rs))
             outColTitles.append("[oe %i] Transmitivity"%(1+i))
 
+            absorbed = cumulated * (1.0 - rs)
             cumulated *= rs
 
         if energies[0] != energies[-1]:
@@ -151,8 +155,11 @@ def xpower_calc(energies=numpy.linspace(1000.0,50000.0,100), source=numpy.ones(1
             txt += "      Normalized Outcoming Power: %f\n"%(I2/I0)
             I1 = I2
 
+        outArray = numpy.vstack((outArray,absorbed))
+        outColTitles.append("Spectral power absorbed in oe #%i"%(1+i))
+
         outArray = numpy.vstack((outArray,cumulated))
-        outColTitles.append("Intensity after oe #%i"%(1+i))
+        outColTitles.append("Spectral power after oe #%i"%(1+i))
 
     ncol = len(outColTitles)
     npoints = energies.size

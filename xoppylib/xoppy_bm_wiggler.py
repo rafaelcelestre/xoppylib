@@ -33,6 +33,11 @@ def xoppy_calc_bm(MACHINE_NAME="ESRF bending magnet",RB_CHOICE=0,MACHINE_R_M=25.
     ec_m = 4.0*numpy.pi*r_m/3.0/numpy.power(gamma,3) # wavelength in m
     ec_ev = srfunc.m2ev / ec_m
 
+    print("\nLorent factor gamma: %g" % (gamma))
+    print("\nMagnetic radius: %g m" % (r_m))
+    print("\nCritical energy: %g eV; wavelength: %g A" % (ec_ev, ec_m * 1e10))
+
+
     fm = None
     a = None
     energy_ev = None
@@ -216,7 +221,7 @@ def xoppy_calc_wigg(FIELD=0,NPERIODS=12,ULAMBDA=0.125,K=14.0,ENERGY=6.04,PHOT_EN
         cumulated_power = 0.0
 
     print("\nPower from integral of spectrum (sum rule): %8.3f W" % (cumulated_power[-1]))
-    return e, f0, p0 , cumulated_power
+    return e, f0, p0 , cumulated_power, t0, p
 
 
 def trapezoidal_rule_2d_1darrays(data2D,h=None,v=None):
@@ -536,7 +541,7 @@ def crossings_nonzero_all(data):
 def create_magnetic_field_for_bending_magnet(do_plot=False,filename="",B0=-1.0,divergence=1e-3,radius=10.0,npoints=500):
 
     L = radius * divergence
-    Lmax = numpy.abs(L * 1.1)
+    Lmax = numpy.abs(L * 1.0)
     y = numpy.linspace(-Lmax / 2, Lmax / 2, npoints)
 
     B = y * 0.0 + B0

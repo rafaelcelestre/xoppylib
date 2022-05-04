@@ -1405,6 +1405,7 @@ def calc_temperature_factor(temperature, crystal='Si', debyeTemperature=644.92,
 def run_diff_pat(
     bragg_dict,
     preprocessor_file="xcrystal.bra",
+    descriptor       = 'Si',
     MOSAIC           = 0,
     GEOMETRY         = 0,
     SCAN             = 2,
