@@ -1,4 +1,5 @@
 import numpy
+import scipy.constants as codata
 from xoppylib.xoppy_xraylib_util import descriptor_kind_index, density, reflectivity_fresnel
 import xraylib # using: CS_Total_CP Refractive_Index_Re Refractive_Index_Im
 
@@ -46,7 +47,7 @@ def xpower_calc(energies=numpy.linspace(1000.0,50000.0,100), source=numpy.ones(1
     outArray = numpy.vstack((outArray,source))
     outColTitles.append("Source")
 
-    txt = ""
+    txt = "\n\n"
     txt += "*************************** power results ******************\n"
     if energies[0] != energies[-1]:
         txt += "  Source energy: start=%f eV, end=%f eV, points=%d \n"%(energies[0],energies[-1],energies.size)
@@ -57,13 +58,17 @@ def xpower_calc(energies=numpy.linspace(1000.0,50000.0,100), source=numpy.ones(1
     if energies[0] != energies[-1]:
         # I0 = source[0:-1].sum()*(energies[1]-energies[0])
         I0 = numpy.trapz(source, x=energies, axis=-1)
-        txt += "  Incoming power (integral of spectrum): %f \n"%(I0)
+        P0 = numpy.trapz(source / (codata.e * energies), x=energies, axis=-1)
+        txt += "\n  Incoming power (integral of spectrum): %g W (%g photons)\n" % (I0, P0)
 
         I1 = I0
+        P1 = P0
     else:
-        txt += "  Incoming power: %f \n"%(source[0])
+        txt += "  Incoming power: %g W (%g photons) \n"%(source[0], source[0] / (codata.e * energies))
         I0  = source[0]
         I1 = I0
+        P0 = source[0] / (codata.e * energies)
+        P1 = P0
 
 
 
@@ -73,15 +78,15 @@ def xpower_calc(energies=numpy.linspace(1000.0,50000.0,100), source=numpy.ones(1
         #info oe
         if flags[i] == 0:
             txt += '      *****   oe '+str(i+1)+'  [Filter] *************\n'
-            txt += '      Material: %s\n'%(substance[i])
-            txt += '      Density [g/cm^3]: %f \n'%(dens[i])
-            txt += '      thickness [mm] : %f \n'%(thick[i])
+            txt += '      Material:  %s\n'%(substance[i])
+            txt += '      Density:   %f g/cm^3\n'%(dens[i])
+            txt += '      thickness: %f mm\n'%(thick[i])
         else:
             txt += '      *****   oe '+str(i+1)+'  [Mirror] *************\n'
-            txt += '      Material: %s\n'%(substance[i])
-            txt += '      Density [g/cm^3]: %f \n'%(dens[i])
-            txt += '      grazing angle [mrad]: %f \n'%(angle[i])
-            txt += '      roughness [A]: %f \n'%(roughness[i])
+            txt += '      Material:   %s\n'%(substance[i])
+            txt += '      Density:    %f g/cm^3\n'%(dens[i])
+            txt += '      grazing angle: %f mrad\n'%(angle[i])
+            txt += '      roughness: %f A\n'%(roughness[i])
 
 
         if flags[i] == 0: # filter
@@ -137,22 +142,21 @@ def xpower_calc(energies=numpy.linspace(1000.0,50000.0,100), source=numpy.ones(1
             cumulated *= rs
 
         if energies[0] != energies[-1]:
-            # I2 = cumulated[0:-1].sum()*(energies[1]-energies[0])
-            #txt += "      Outcoming power [Sum]: %f\n"%(I2)
-            #txt += "      Outcoming power [Trapez]: %f\n"%(I2b)
             I2 = numpy.trapz( cumulated, x=energies, axis=-1)
-            txt += "      Outcoming power: %f\n"%(I2)
-            txt += "      Absorbed power: %f\n"%(I1-I2)
-            txt += "      Normalized Outcoming Power: %f\n"%(I2/I0)
+            P2 = numpy.trapz( cumulated / (codata.e * energies) , x=energies, axis=-1)
+            txt += "      Outcoming power: %f  W (%g photons)\n" % (I2, P2)
+            txt += "      Absorbed power:  %f W (%g photons)\n" % (I1 - I2, P1 - P2)
+            txt += "      Normalized Outcoming Power: %f\n" % (I2 / I0)
             if flags[i] == 0:
                 pass
-                txt += "      Absorbed dose Gy.(mm^2 beam cross section)/s %f\n: "%((I1-I2)/(dens[i]*thick[i]*1e-6))
+                txt += "      Absorbed dose %f Gy.(mm^2 beam cross section)/s\n "%((I1-I2)/(dens[i]*thick[i]*1e-6))
             I1 = I2
         else:
             I2 = cumulated[0]
-            txt += "      Outcoming power: %f\n"%(cumulated[0])
-            txt += "      Absorbed power: %f\n"%(I1-I2)
-            txt += "      Normalized Outcoming Power: %f\n"%(I2/I0)
+            P2 = cumulated[0] / (codata.e * energies)
+            txt += "      Outcoming power: %f W (%g photons)\n" % (cumulated[0], P2)
+            txt += "      Absorbed power: %f W (%g photons)\n" % (I1 - I2, P1 - P2)
+            txt += "      Normalized Outcoming Power: %f\n" % (I2 / I0)
             I1 = I2
 
         outArray = numpy.vstack((outArray,absorbed))
