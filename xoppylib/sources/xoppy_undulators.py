@@ -6,7 +6,10 @@ import numpy
 import os
 from collections import OrderedDict
 
-from xoppylib import srundplug
+from xoppylib.sources.srundplug import calc1d_us, calc1d_srw, calc1d_urgent, calc1d_pysru
+from xoppylib.sources.srundplug import calc2d_us, calc2d_srw, calc2d_urgent, calc2d_pysru
+from xoppylib.sources.srundplug import calc3d_us, calc3d_srw, calc3d_urgent, calc3d_pysru, calc3d_srw_step_by_step
+
 from xoppylib.fit_gaussian2d import fit_gaussian2d, info_params, twoD_Gaussian
 
 from srxraylib.util.h5_simple_writer import H5SimpleWriter
@@ -71,13 +74,13 @@ def xoppy_calc_undulator_spectrum(ELECTRONENERGY=6.04,ELECTRONENERGYSPREAD=0.001
 
     if METHOD == 0:
         print("Undulator flux calculation using US. Please wait...")
-        e, f = srundplug.calc1d_us(bl,photonEnergyMin=PHOTONENERGYMIN,photonEnergyMax=PHOTONENERGYMAX,
+        e, f = calc1d_us(bl,photonEnergyMin=PHOTONENERGYMIN,photonEnergyMax=PHOTONENERGYMAX,
               photonEnergyPoints=PHOTONENERGYPOINTS,fileName=outFile,fileAppend=False,zero_emittance=zero_emittance)
         print("Done")
         print("\nCheck calculation output at: %s"%(os.path.join(os.getcwd(),"us.out")))
     if METHOD == 1:
         print("Undulator flux calculation using URGENT. Please wait...")
-        e, f = srundplug.calc1d_urgent(bl,photonEnergyMin=PHOTONENERGYMIN,photonEnergyMax=PHOTONENERGYMAX,
+        e, f = calc1d_urgent(bl,photonEnergyMin=PHOTONENERGYMIN,photonEnergyMax=PHOTONENERGYMAX,
               photonEnergyPoints=PHOTONENERGYPOINTS,fileName=outFile,fileAppend=False,zero_emittance=zero_emittance)
         print("Done")
         print("\nCheck calculation output at: %s"%(os.path.join(os.getcwd(),"urgent.out")))
@@ -87,7 +90,7 @@ def xoppy_calc_undulator_spectrum(ELECTRONENERGY=6.04,ELECTRONENERGYSPREAD=0.001
 
         print ("Number of harmonics considered: %d \n"%(h_max))
         print("Undulator flux calculation using SRW. Please wait...")
-        e, f = srundplug.calc1d_srw(bl,photonEnergyMin=PHOTONENERGYMIN,photonEnergyMax=PHOTONENERGYMAX,
+        e, f = calc1d_srw(bl,photonEnergyMin=PHOTONENERGYMIN,photonEnergyMax=PHOTONENERGYMAX,
               photonEnergyPoints=PHOTONENERGYPOINTS,fileName=outFile,fileAppend=False,zero_emittance=zero_emittance,
               srw_max_harmonic_number=h_max)
         print("Done")
@@ -151,19 +154,19 @@ def xoppy_calc_undulator_power_density(ELECTRONENERGY=6.04,ELECTRONENERGYSPREAD=
     if METHOD == 0:
         code = "US"
         print("Undulator power_density calculation using US. Please wait...")
-        h,v,p = srundplug.calc2d_us(bl,fileName=outFile,fileAppend=False,hSlitPoints=HSLITPOINTS,vSlitPoints=VSLITPOINTS,
+        h,v,p = calc2d_us(bl,fileName=outFile,fileAppend=False,hSlitPoints=HSLITPOINTS,vSlitPoints=VSLITPOINTS,
                                     zero_emittance=zero_emittance)
         print("Done")
     if METHOD == 1:
         code = "URGENT"
         print("Undulator power_density calculation using URGENT. Please wait...")
-        h,v,p = srundplug.calc2d_urgent(bl,fileName=outFile,fileAppend=False,hSlitPoints=HSLITPOINTS,vSlitPoints=VSLITPOINTS,
+        h,v,p = calc2d_urgent(bl,fileName=outFile,fileAppend=False,hSlitPoints=HSLITPOINTS,vSlitPoints=VSLITPOINTS,
                                         zero_emittance=zero_emittance)
         print("Done")
     if METHOD == 2:
         code = "SRW"
         print("Undulator power_density calculation using SRW. Please wait...")
-        h,v,p = srundplug.calc2d_srw(bl,fileName=outFile,fileAppend=False,hSlitPoints=HSLITPOINTS,vSlitPoints=VSLITPOINTS,
+        h,v,p = calc2d_srw(bl,fileName=outFile,fileAppend=False,hSlitPoints=HSLITPOINTS,vSlitPoints=VSLITPOINTS,
                                      zero_emittance=zero_emittance)
         print("Done")
 
@@ -341,25 +344,25 @@ def xoppy_calc_undulator_radiation(ELECTRONENERGY=6.04,ELECTRONENERGYSPREAD=0.00
     if METHOD == 0:
         code = "US"
         print("Undulator radiation calculation using US. Please wait...")
-        e,h,v,p = srundplug.calc3d_us(bl,fileName=outFile,fileAppend=False,hSlitPoints=HSLITPOINTS,vSlitPoints=VSLITPOINTS,
+        e,h,v,p = calc3d_us(bl,fileName=outFile,fileAppend=False,hSlitPoints=HSLITPOINTS,vSlitPoints=VSLITPOINTS,
                                     photonEnergyMin=photonEnergyMin,photonEnergyMax=photonEnergyMax,
                                     photonEnergyPoints=photonEnergyPoints,zero_emittance=zero_emittance)
     if METHOD == 1:
         code = "URGENT"
         print("Undulator radiation calculation using URGENT. Please wait...")
-        e,h,v,p = srundplug.calc3d_urgent(bl,fileName=outFile,fileAppend=False,hSlitPoints=HSLITPOINTS,vSlitPoints=VSLITPOINTS,
+        e,h,v,p = calc3d_urgent(bl,fileName=outFile,fileAppend=False,hSlitPoints=HSLITPOINTS,vSlitPoints=VSLITPOINTS,
                                     photonEnergyMin=photonEnergyMin,photonEnergyMax=photonEnergyMax,
                                     photonEnergyPoints=photonEnergyPoints,zero_emittance=zero_emittance)
     if METHOD == 2:
         code = "SRW"
         print("Undulator radiation calculation using SRW. Please wait...")
-        e,h,v,p = srundplug.calc3d_srw(bl,fileName=outFile,fileAppend=False,hSlitPoints=HSLITPOINTS,vSlitPoints=VSLITPOINTS,
+        e,h,v,p = calc3d_srw(bl,fileName=outFile,fileAppend=False,hSlitPoints=HSLITPOINTS,vSlitPoints=VSLITPOINTS,
                                     photonEnergyMin=photonEnergyMin,photonEnergyMax=photonEnergyMax,
                                     photonEnergyPoints=photonEnergyPoints,zero_emittance=zero_emittance)
     if METHOD == 22:
         code = "SRW"
         print("Undulator radiation calculation using SRW. Please wait...")
-        e, h, v, p = srundplug.calc3d_srw_step_by_step(bl, fileName=outFile, fileAppend=False, hSlitPoints=HSLITPOINTS,
+        e, h, v, p = calc3d_srw_step_by_step(bl, fileName=outFile, fileAppend=False, hSlitPoints=HSLITPOINTS,
                                           vSlitPoints=VSLITPOINTS,
                                           photonEnergyMin=photonEnergyMin, photonEnergyMax=photonEnergyMax,
                                           photonEnergyPoints=photonEnergyPoints, zero_emittance=zero_emittance)
@@ -367,7 +370,7 @@ def xoppy_calc_undulator_radiation(ELECTRONENERGY=6.04,ELECTRONENERGYSPREAD=0.00
         # todo too slow
         code = "pySRU"
         print("Undulator radiation calculation using SRW. Please wait...")
-        e,h,v,p = srundplug.calc3d_pysru(bl,fileName=outFile,fileAppend=False,hSlitPoints=HSLITPOINTS,vSlitPoints=VSLITPOINTS,
+        e,h,v,p = calc3d_pysru(bl,fileName=outFile,fileAppend=False,hSlitPoints=HSLITPOINTS,vSlitPoints=VSLITPOINTS,
                                     photonEnergyMin=photonEnergyMin,photonEnergyMax=photonEnergyMax,
                                     photonEnergyPoints=photonEnergyPoints,zero_emittance=zero_emittance)
 

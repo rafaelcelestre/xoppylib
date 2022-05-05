@@ -311,6 +311,9 @@ def f0_calc(
     #
     return {"application":"xoppy","name":"f0","data":numpy.vstack((qscale,f0)),"labels":["q=sin(theta)/lambda [A^-1]","f0 [electron units]"]}
 
+#
+# todo delete f1f2_calc* now in xoppylib.scattering_fuctions.f1f2_calc
+#
 def f1f2_calc(descriptor, energy, theta=3.0e-3, F=0, density=None, rough=0.0, verbose=True):
     """
     calculate the elastic Photon-Atom anonalous f1 and f2  coefficients as a function of energy.
@@ -536,6 +539,7 @@ def f1f2_calc_mix(descriptor, energy, theta=3.0e-3, F=0, density=None, rough=0.0
 
     raise Exception("Why am I here? ")
 
+
 def f1f2_calc_nist(descriptor, energy, theta=3.0e-3, F=0, density=None, rough=0.0, verbose=True):
     """
     Like f1f2_calc but for a compound defined in the NIST list
@@ -657,6 +661,9 @@ def f1f2_calc_nist(descriptor, energy, theta=3.0e-3, F=0, density=None, rough=0.
 
     raise Exception("Why am I here? ")
 
+#
+# todo delete cross_calc* now in xoppylib.scattering_fuctions.cross_calc
+#
 def cross_calc(descriptor, energy, calculate=0, unit=None, density=None, verbose=True):
     """
     calculate the atomic cross sections and attenuation coefficients.

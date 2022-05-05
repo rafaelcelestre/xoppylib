@@ -5,14 +5,14 @@ from dabax.dabax_xraylib import DabaxXraylib
 import xraylib
 
 def xoppy_calc_f0(
-        descriptor   = "Si",
-        MAT_FLAG     = 0,
-        GRIDSTART    = 0.0,
-        GRIDEND      = 8.0,
-        GRIDN        = 100,
-        DUMP_TO_FILE = 0,
-        FILE_NAME    = "f0.dat",
-        CHARGE       = 0.0,
+        descriptor                 = "Si",
+        MAT_FLAG                   = 0,
+        GRIDSTART                  = 0.0,
+        GRIDEND                    = 8.0,
+        GRIDN                      = 100,
+        DUMP_TO_FILE               = 0,
+        FILE_NAME                  = "f0.dat",
+        CHARGE                     = 0.0,
         material_constants_library = None,
             ):
 

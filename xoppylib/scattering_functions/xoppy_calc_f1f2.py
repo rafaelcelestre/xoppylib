@@ -1,23 +1,24 @@
 import numpy
-from xoppylib.xoppy_xraylib_util import f1f2_calc, f1f2_calc_mix, f1f2_calc_nist
+from xoppylib.scattering_functions.f1f2_calc import f1f2_calc, f1f2_calc_mix, f1f2_calc_nist
+# from xoppylib.xoppy_xraylib_util import f1f2_calc, f1f2_calc_mix, f1f2_calc_nist
 
 def xoppy_calc_f1f2(
-    descriptor   = "Si",
-    density      = "?",
-    MAT_FLAG     = 0,
-    # NIST_NAME    = 177,
-    CALCULATE    = 1,
-    GRID         = 0,
-    GRIDSTART    = 5000.0,
-    GRIDEND      = 25000.0,
-    GRIDN        = 100,
-    THETAGRID    = 0,
-    ROUGH        = 0.0,
-    THETA1       = 2.0,
-    THETA2       = 5.0,
-    THETAN       = 50,
-    DUMP_TO_FILE = 0,
-    FILE_NAME    = "f1f2.dat",
+    descriptor                 = "Si",
+    density                    = "?",
+    MAT_FLAG                   = 0,
+    CALCULATE                  = 1,
+    GRID                       = 0,
+    GRIDSTART                  = 5000.0,
+    GRIDEND                    = 25000.0,
+    GRIDN                      = 100,
+    THETAGRID                  = 0,
+    ROUGH                      = 0.0,
+    THETA1                     = 2.0,
+    THETA2                     = 5.0,
+    THETAN                     = 50,
+    DUMP_TO_FILE               = 0,
+    FILE_NAME                  = "f1f2.dat",
+    material_constants_library = None,
 ):
 
     if GRID == 0: # standard energy grid
@@ -43,13 +44,16 @@ def xoppy_calc_f1f2(
     out = numpy.zeros((energy.size,theta.size))
     for i,itheta in enumerate(theta):
         if MAT_FLAG == 0: # element
-            tmp = f1f2_calc(descriptor,energy,1e-3*itheta,F=1+CALCULATE,rough=ROUGH,density=density)
+            tmp = f1f2_calc(descriptor,energy,1e-3*itheta,F=1+CALCULATE,rough=ROUGH,density=density,
+                            material_constants_library=material_constants_library)
             out[:,i] = tmp
         elif MAT_FLAG == 1:  # compound
-            tmp = f1f2_calc_mix(descriptor,energy,1e-3*itheta,F=1+CALCULATE,rough=ROUGH,density=density)
+            tmp = f1f2_calc_mix(descriptor,energy,1e-3*itheta,F=1+CALCULATE,rough=ROUGH,density=density,
+                            material_constants_library=material_constants_library)
             out[:,i] = tmp
         elif MAT_FLAG == 2:  # nist list
-            tmp = f1f2_calc_nist(descriptor,energy,1e-3*itheta,F=1+CALCULATE,rough=ROUGH,density=density)
+            tmp = f1f2_calc_nist(descriptor,energy,1e-3*itheta,F=1+CALCULATE,rough=ROUGH,density=density,
+                            material_constants_library=material_constants_library)
             out[:,i] = tmp
 
     if ((energy.size == 1) and (theta.size == 1)):

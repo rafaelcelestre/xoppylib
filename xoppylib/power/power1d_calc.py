@@ -1,12 +1,14 @@
 import numpy
 import scipy.constants as codata
+
 from xoppylib.xoppy_xraylib_util import descriptor_kind_index, density, reflectivity_fresnel
+
 import xraylib # using: CS_Total_CP Refractive_Index_Re Refractive_Index_Im
+from dabax.dabax_xraylib import DabaxXraylib
 
-
-def xpower_calc(energies=numpy.linspace(1000.0,50000.0,100), source=numpy.ones(100),
+def power1d_calc(energies=numpy.linspace(1000.0,50000.0,100), source=numpy.ones(100),
                 substance=["Be"], flags=[0], dens=["?"], thick=[0.5], angle=[3.0], roughness=0.0,
-                output_file=None):
+                output_file=None, material_constants_library=None,):
     """
     Apply reflectivities/transmittivities of optical elements on a source spectrum
 
@@ -90,10 +92,13 @@ def xpower_calc(energies=numpy.linspace(1000.0,50000.0,100), source=numpy.ones(1
 
 
         if flags[i] == 0: # filter
-            tmp = numpy.zeros(energies.size)
-            for j,energy in enumerate(energies):
 
-                tmp[j] = xraylib.CS_Total_CP(substance[i],energy/1000.0)
+            if isinstance(material_constants_library, DabaxXraylib):
+                tmp = material_constants_library.CS_Total_CP(substance[i],energies/1000.0)
+            else:
+                tmp = numpy.zeros(energies.size)
+                for j,energy in enumerate(energies):
+                    tmp[j] = material_constants_library.CS_Total_CP(substance[i],energy/1000.0)
 
             trans = numpy.exp(-tmp*dens[i]*(thick[i]/10.0))
             outArray = numpy.vstack((outArray,tmp))
@@ -113,16 +118,22 @@ def xpower_calc(energies=numpy.linspace(1000.0,50000.0,100), source=numpy.ones(1
             cumulated *= trans
 
         if flags[i] == 1: # mirror
-            tmp = numpy.zeros(energies.size)
-            for j,energy in enumerate(energies):
-                tmp[j] = xraylib.Refractive_Index_Re(substance[i],energy/1000.0,dens[i])
+            if isinstance(material_constants_library, DabaxXraylib):
+                tmp = material_constants_library.Refractive_Index_Re(substance[i],energies/1000.0,dens[i])
+            else:
+                tmp = numpy.zeros(energies.size)
+                for j,energy in enumerate(energies):
+                    tmp[j] = material_constants_library.Refractive_Index_Re(substance[i],energy/1000.0,dens[i])
             delta = 1.0 - tmp
             outArray = numpy.vstack((outArray,delta))
             outColTitles.append("[oe %i] 1-Re[n]=delta"%(1+i))
 
-            beta = numpy.zeros(energies.size)
-            for j,energy in enumerate(energies):
-                beta[j] = xraylib.Refractive_Index_Im(substance[i],energy/1000.0,dens[i])
+            if isinstance(material_constants_library, DabaxXraylib):
+                beta = material_constants_library.Refractive_Index_Im(substance[i],energies/1000.0,dens[i])
+            else:
+                beta = numpy.zeros(energies.size)
+                for j,energy in enumerate(energies):
+                    beta[j] = material_constants_library.Refractive_Index_Im(substance[i],energy/1000.0,dens[i])
             outArray = numpy.vstack((outArray,beta))
             outColTitles.append("[oe %i] Im[n]=beta"%(1+i))
 
@@ -191,37 +202,3 @@ def xpower_calc(energies=numpy.linspace(1000.0,50000.0,100), source=numpy.ones(1
         print("File written to disk: " + output_file)
 
     return {"data":outArray,"labels":outColTitles,"info":txt}
-
-def xoppy_calc_xpower(
-                      energies=numpy.linspace(1,100,100),
-                      source    = numpy.ones(100),
-                      substance = ['Si']*5,
-                      thick     = [1.0]*5,
-                      angle     = [0.0]*5,
-                      dens      = ['?']*5,
-                      roughness = [0.0]*5,
-                      flags     = [1]*5,
-                      NELEMENTS = 1,
-                      FILE_DUMP = 0,
-                      ):
-
-    substance = substance[0:NELEMENTS+1]
-    thick     = thick[0:NELEMENTS+1]
-    angle     = angle[0:NELEMENTS+1]
-    dens      = dens[0:NELEMENTS+1]
-    roughness = roughness[0:NELEMENTS+1]
-    flags     = flags[0:NELEMENTS+1]
-
-
-    if FILE_DUMP:
-        output_file = "power.spec"
-    else:
-        output_file = None
-
-    out_dictionary = xpower_calc(energies=energies,source=source,substance=substance,
-                                 flags=flags,dens=dens,thick=thick,angle=angle,roughness=roughness,output_file=output_file)
-
-    return out_dictionary
-
-if __name__ == "__main__":
-    print(xoppy_calc_xpower())

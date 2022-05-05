@@ -1,5 +1,5 @@
 import numpy
-from xoppylib.xoppy_xraylib_util import cross_calc, cross_calc_mix, cross_calc_nist
+from xoppylib.scattering_functions.cross_calc import cross_calc, cross_calc_mix, cross_calc_nist
 
 def xoppy_calc_crosssec(
     descriptor   = "Si",
