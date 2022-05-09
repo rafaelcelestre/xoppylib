@@ -6,11 +6,12 @@ import numpy
 import scipy.constants as codata
 import h5py
 import xraylib
-from xoppylib.xoppy_xraylib_util import reflectivity_fresnel
+from xoppylib.scattering_functions.fresnel import reflectivity_fresnel
 from xoppylib.xoppy_xraylib_util import nist_compound_list, density
 from scipy.interpolate import interp2d, RectBivariateSpline
 from srxraylib.util.h5_simple_writer import H5SimpleWriter
 
+import xraylib
 #
 # calculation
 #

@@ -2,17 +2,18 @@ import numpy
 from xoppylib.scattering_functions.cross_calc import cross_calc, cross_calc_mix, cross_calc_nist
 
 def xoppy_calc_crosssec(
-    descriptor   = "Si",
-    density      = "?",
-    MAT_FLAG     = 2,
-    CALCULATE    = 1,
-    GRID         = 0,
-    GRIDSTART    = 100.0,
-    GRIDEND      = 10000.0,
-    GRIDN        = 200,
-    UNIT         = 0,
-    DUMP_TO_FILE = 0,
-    FILE_NAME    = "CrossSec.dat",
+    descriptor                 = "Si",
+    density                    = "?",
+    MAT_FLAG                   = 2,
+    CALCULATE                  = 1,
+    GRID                       = 0,
+    GRIDSTART                  = 100.0,
+    GRIDEND                    = 10000.0,
+    GRIDN                      = 200,
+    UNIT                       = 0,
+    DUMP_TO_FILE               = 0,
+    FILE_NAME                  = "CrossSec.dat",
+    material_constants_library = None,
 ):
 
     if GRID == 0:
@@ -28,11 +29,14 @@ def xoppy_calc_crosssec(
         energy = numpy.array([GRIDSTART])
 
     if MAT_FLAG == 0: # element
-        out =  cross_calc(descriptor,energy,calculate=CALCULATE,density=density)
+        out =  cross_calc(descriptor,energy,calculate=CALCULATE,density=density,
+                          material_constants_library=material_constants_library)
     elif MAT_FLAG == 1: # compound parse
-        out =  cross_calc_mix(descriptor,energy,calculate=CALCULATE,density=density)
+        out =  cross_calc_mix(descriptor,energy,calculate=CALCULATE,density=density,
+                          material_constants_library=material_constants_library)
     elif MAT_FLAG == 2: # NIST compound
-        out =  cross_calc_nist(descriptor,energy,calculate=CALCULATE,density=density)
+        out =  cross_calc_nist(descriptor,energy,calculate=CALCULATE,
+                          material_constants_library=material_constants_library)
 
     calculate_items = ['Total','PhotoElectric','Rayleigh','Compton','Total minus Rayleigh']
     unit_items = ['barn/atom','cm^2','cm^2/g','cm^-1']
@@ -69,3 +73,20 @@ def xoppy_calc_crosssec(
                 raise Exception("CrossSec: The data could not be dumped onto the specified file!\n")
 
     return to_return
+
+if __name__ == "__main__":
+    from dabax.dabax_xraylib import DabaxXraylib
+    tmp = xoppy_calc_crosssec(
+            descriptor="Water, Liquid",
+            density=None,
+            MAT_FLAG=2,
+            CALCULATE=1,
+            GRID=0,
+            GRIDSTART=100.0,
+            GRIDEND=10000.0,
+            GRIDN=200,
+            UNIT=0,
+            DUMP_TO_FILE=0,
+            FILE_NAME="CrossSec.dat",
+            material_constants_library=DabaxXraylib(),
+    )

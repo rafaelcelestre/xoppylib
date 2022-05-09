@@ -19,8 +19,9 @@ tocm = codata.h*codata.c/codata.e*1e2 # 12398.419739640718e-8
 
 from srxraylib.util.h5_simple_writer import H5SimpleWriter
 
-# retrieve a bind of xraylib refractive index that accept NIST compounds
-from xoppylib.xoppy_xraylib_util import density, Refractive_Index_Re, Refractive_Index_Im
+
+from xoppylib.xoppy_xraylib_util import density
+from xoppylib.xoppy_xraylib_util import Refractive_Index_Im_Extended_NIST, Refractive_Index_Re_Extended_NIST
 
 class MLayer(object):
 
@@ -349,8 +350,8 @@ class MLayer(object):
         BETA = numpy.zeros(np)
         for i in range(np):  #substrate
             energy = 30e0*numpy.power(10,elfactor*(istart+i-1)) *1e-3 # in keV!!
-            delta = 1e0 - Refractive_Index_Re(matSubstrate,energy,denSubstrate)
-            beta = Refractive_Index_Im(matSubstrate,energy,denSubstrate)
+            delta = 1e0 - Refractive_Index_Re_Extended_NIST(matSubstrate,energy,denSubstrate)
+            beta = Refractive_Index_Im_Extended_NIST(matSubstrate,energy,denSubstrate)
             DELTA[i] = delta
             BETA[i] = beta
             f.write( ("%26.17e "*2+"\n") % tuple([delta,beta]) )
@@ -361,8 +362,8 @@ class MLayer(object):
         BETA = numpy.zeros(np)
         for i in range(np): #even
             energy = 30e0*numpy.power(10,elfactor*(istart+i-1)) *1e-3 # in keV!!
-            delta = 1e0 - Refractive_Index_Re(matEven,energy,denEven)
-            beta = Refractive_Index_Im(matEven,energy,denEven)
+            delta = 1e0 - Refractive_Index_Re_Extended_NIST(matEven,energy,denEven)
+            beta = Refractive_Index_Im_Extended_NIST(matEven,energy,denEven)
             DELTA[i] = delta
             BETA[i] = beta
             f.write( ("%26.17e  "*2+"\n") % tuple([delta,beta]) )
@@ -373,8 +374,8 @@ class MLayer(object):
         BETA = numpy.zeros(np)
         for i in range(np): #odd
             energy = 30e0*numpy.power(10,elfactor*(istart+i-1)) *1e-3 # in keV!!
-            delta = 1e0 - Refractive_Index_Re(matOdd,energy,denOdd)
-            beta = Refractive_Index_Im(matOdd,energy,denOdd)
+            delta = 1e0 - Refractive_Index_Re_Extended_NIST(matOdd,energy,denOdd)
+            beta = Refractive_Index_Im_Extended_NIST(matOdd,energy,denOdd)
             DELTA[i] = delta
             BETA[i] = beta
             f.write( ("%26.17e "*2+"\n") % tuple([delta,beta]) )
@@ -513,7 +514,6 @@ class MLayer(object):
         out.pre_mlayer_dict = pre_mlayer_dict
         out.using_pre_mlayer = False
         return out
-
 
 
     # !
@@ -755,12 +755,12 @@ class MLayer(object):
             DELO  = DELTA_O[index1] + (DELTA_O[index1+1] - DELTA_O[index1]) *(PHOT_ENER - ENER[index1])/(ENER[index1+1] - ENER[index1])
             BETO  =  BETA_O[index1] + ( BETA_O[index1+1] -  BETA_O[index1]) *(PHOT_ENER - ENER[index1])/(ENER[index1+1] - ENER[index1])
         else: # not using preprocessor, using xraylib
-            DELS  = 1.0 - Refractive_Index_Re(self.pre_mlayer_dict["materialS"],1e-3*PHOT_ENER,self.pre_mlayer_dict["densityS"])
-            BETS  =       Refractive_Index_Im(self.pre_mlayer_dict["materialS"],1e-3*PHOT_ENER,self.pre_mlayer_dict["densityS"])
-            DELE  = 1.0 - Refractive_Index_Re(self.pre_mlayer_dict["material1"],1e-3*PHOT_ENER,self.pre_mlayer_dict["density1"])
-            BETE  =       Refractive_Index_Im(self.pre_mlayer_dict["material1"],1e-3*PHOT_ENER,self.pre_mlayer_dict["density1"])
-            DELO  = 1.0 - Refractive_Index_Re(self.pre_mlayer_dict["material2"],1e-3*PHOT_ENER,self.pre_mlayer_dict["density2"])
-            BETO  =       Refractive_Index_Im(self.pre_mlayer_dict["material2"],1e-3*PHOT_ENER,self.pre_mlayer_dict["density2"])
+            DELS  = 1.0 - Refractive_Index_Re_Extended_NIST(self.pre_mlayer_dict["materialS"],1e-3*PHOT_ENER,self.pre_mlayer_dict["densityS"])
+            BETS  =       Refractive_Index_Im_Extended_NIST(self.pre_mlayer_dict["materialS"],1e-3*PHOT_ENER,self.pre_mlayer_dict["densityS"])
+            DELE  = 1.0 - Refractive_Index_Re_Extended_NIST(self.pre_mlayer_dict["material1"],1e-3*PHOT_ENER,self.pre_mlayer_dict["density1"])
+            BETE  =       Refractive_Index_Im_Extended_NIST(self.pre_mlayer_dict["material1"],1e-3*PHOT_ENER,self.pre_mlayer_dict["density1"])
+            DELO  = 1.0 - Refractive_Index_Re_Extended_NIST(self.pre_mlayer_dict["material2"],1e-3*PHOT_ENER,self.pre_mlayer_dict["density2"])
+            BETO  =       Refractive_Index_Im_Extended_NIST(self.pre_mlayer_dict["material2"],1e-3*PHOT_ENER,self.pre_mlayer_dict["density2"])
 
 
 
@@ -1019,7 +1019,7 @@ if __name__ == "__main__":
         E_MIN=100.0, E_MAX=500.0,
         O_DENSITY=7.19, O_MATERIAL="Cr", #"Water, Liquid", # odd: closer to vacuum
         E_DENSITY=3.00, E_MATERIAL="Sc",  # even: closer to substrate
-        S_DENSITY=2.33, S_MATERIAL="Si",  # substrate
+        S_DENSITY=2.33, S_MATERIAL="Water, Liquid", #"Si",  # substrate
         GRADE_DEPTH=0,
         N_PAIRS=50,
         THICKNESS=22.0,

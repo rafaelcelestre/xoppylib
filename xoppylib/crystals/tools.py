@@ -18,6 +18,102 @@ from dabax.dabax_xraylib import DabaxXraylib
 #
 #
 
+
+def bragg_metrictensor(a,b,c,a1,a2,a3,RETURN_REAL_SPACE=0,RETURN_VOLUME=0,HKL=None):
+    """
+    Returns the metric tensor in the reciprocal space
+
+    :param a: unit cell a
+    :param b: unit cell b
+    :param c: unit cell c
+    :param a1: unit cell alpha
+    :param a2: unit cell beta
+    :param a3: unit cell gamma
+    :param RETURN_REAL_SPACE: set to 1 for returning metric tensor in real space
+    :param RETURN_VOLUME: set to 1 to return the unit cell volume in Angstroms^3
+    :param HKL: if !=None, returns the d-spacing for the corresponding [H,K,L] reflection
+    :return: the returned value depends on the keywords used. If RETURN_REAL_SPACE=0,RETURN_VOLUME=0, and HKL=None
+             then retuns the metric tensor in reciprocal space.
+    """
+    # input cell a,b,c,alpha,beta,gamma; angles in degrees
+    a1 *= numpy.pi / 180.0
+    a2 *= numpy.pi / 180.0
+    a3 *= numpy.pi / 180.0
+    # ;
+    # ; tensor in real space
+    # ;
+    g = numpy.array( [ [a*a, a*b*numpy.cos(a3), a*c*numpy.cos(a2)], \
+          [a*b*numpy.cos(a3), b*b, b*c*numpy.cos(a1)], \
+          [a*c*numpy.cos(a2), b*c*numpy.cos(a1), c*c]] )
+
+    if RETURN_REAL_SPACE: return g
+    # print("g: ",g)
+
+    # ;
+    # ; volume of the lattice
+    # ;
+    volume2 = numpy.linalg.det(g)
+    volume = numpy.sqrt(volume2)
+
+    # print("Volume of unit cell: %g A^3",volume)
+
+    if RETURN_VOLUME: return volume
+
+    # ;
+    # ; tensor in reciprocal space
+    # ;
+    ginv = numpy.linalg.inv(g)
+    # ;print,gInv
+    #
+
+    # itmp = where(abs(ginv) LT 1d-8)
+    # IF itmp[0] NE -1 THEN ginv[itmp]=0D
+
+    itmp = numpy.where(numpy.abs(ginv) < 1e-8)
+    ginv[itmp] = 0.0
+
+    # print("ginv: ",ginv)
+
+    if HKL != None:
+    #   ; computes d-spacing
+        dd = numpy.dot( numpy.array(HKL) , numpy.dot( ginv , numpy.array(HKL)))
+        #
+        # print("DD: ", dd)
+        dd1 = 1.0 / numpy.sqrt(dd)
+        # print("D-spacing: ",dd1)
+        return dd1
+    else:
+        return ginv
+
+def lorentz(theta_bragg_deg,return_what=0):
+    """
+    This function returns the Lorentz factor, polarization factor (unpolarized beam), geometric factor,
+    or a combination of them.
+
+    :param theta_bragg_deg: Bragg angle in degrees
+    :param return_what: A flag indicating the returned variable:
+                        0: (default) PolFac*lorentzFac
+                        1: PolFac
+                        2: lorentzFac
+                        3: geomFac
+    :return: a scalar value
+    """
+    tr = theta_bragg_deg * numpy.pi / 180.
+    polarization_factor = 0.5 * (1.0 + (numpy.cos(2.0 * tr))**2)
+    lorentz_factor = 1.0 / numpy.sin(2.0 * tr)
+    geometrical_factor = 1.0 * numpy.cos(tr) / numpy.sin(2.0 * tr)
+
+    if return_what == 0:
+        return polarization_factor*lorentz_factor
+    elif return_what == 1:
+        return polarization_factor
+    elif return_what == 2:
+        return lorentz_factor
+    elif return_what == 3:
+        return geometrical_factor
+    elif return_what == 4:
+        return polarization_factor*lorentz_factor*geometrical_factor
+
 # OBSOLETE.... USE bragg_calc2() INSTEAD!
 def bragg_calc(descriptor="Si",hh=1,kk=1,ll=1,temper=1.0,emin=5000.0,emax=15000.0,estep=100.0,fileout=None,
                material_constants_library=xraylib):

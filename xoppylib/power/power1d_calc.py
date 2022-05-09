@@ -1,7 +1,8 @@
 import numpy
 import scipy.constants as codata
 
-from xoppylib.xoppy_xraylib_util import descriptor_kind_index, density, reflectivity_fresnel
+from xoppylib.xoppy_xraylib_util import descriptor_kind_index, density
+from xoppylib.scattering_functions.fresnel import reflectivity_fresnel
 
 import xraylib # using: CS_Total_CP Refractive_Index_Re Refractive_Index_Im
 from dabax.dabax_xraylib import DabaxXraylib

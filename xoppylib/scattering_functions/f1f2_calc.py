@@ -1,14 +1,14 @@
 import numpy
 import scipy.constants as codata
 
-from xoppylib.xoppy_xraylib_util import interface_reflectivity
+from xoppylib.scattering_functions.fresnel import interface_reflectivity
 
 import xraylib
 from dabax.dabax_xraylib import DabaxXraylib
 
 
 def f1f2_calc(descriptor, energy, theta=3.0e-3, F=0, density=None, rough=0.0, verbose=True,
-              material_constants_library = None,):
+              material_constants_library=None,):
     """
     calculate the elastic Photon-Atom anonalous f1 and f2  coefficients as a function of energy.
     It also gives the refractive index components delta and beta (n=1-delta - i beta),
@@ -170,7 +170,7 @@ def f1f2_calc(descriptor, energy, theta=3.0e-3, F=0, density=None, rough=0.0, ve
 
 
 def f1f2_calc_mix(descriptor, energy, theta=3.0e-3, F=0, density=None, rough=0.0, verbose=True,
-                  material_constants_library = None,):
+                  material_constants_library=None,):
     """
     Like f1f2_calc but for a chemical formula. S
 
@@ -209,9 +209,9 @@ def f1f2_calc_mix(descriptor, energy, theta=3.0e-3, F=0, density=None, rough=0.0
     f1 = numpy.zeros_like(energy)
     f2 = numpy.zeros_like(energy)
     for i, zi in enumerate(zetas):
-        f1i = f1f2_calc(material_constants_library.AtomicNumberToSymbol(zi), energy, theta, F=1, verbose=verbose,
+        f1i = f1f2_calc(material_constants_library.AtomicNumberToSymbol(zi), energy, theta, F=1, verbose=False,
                         material_constants_library=material_constants_library)
-        f2i = f1f2_calc(material_constants_library.AtomicNumberToSymbol(zi), energy, theta, F=2, verbose=verbose,
+        f2i = f1f2_calc(material_constants_library.AtomicNumberToSymbol(zi), energy, theta, F=2, verbose=False,
                         material_constants_library=material_constants_library)
         f1 += f1i * weights[i]
         f2 += f2i * weights[i]
@@ -272,7 +272,7 @@ def f1f2_calc_mix(descriptor, energy, theta=3.0e-3, F=0, density=None, rough=0.0
 
 
 def f1f2_calc_nist(descriptor, energy, theta=3.0e-3, F=0, density=None, rough=0.0, verbose=True,
-                   material_constants_library = None,):
+                   material_constants_library=None,):
     """
     Like f1f2_calc but for a compound defined in the NIST list
         See list here:  http://lvserver.ugent.be/xraylib-web/index.php?xrlFunction=GetCompoundDataNISTList&Element=26&ElementOrCompound=FeSO4&Compound=Ca5%28PO4%293&AugerTransa=K&AugerTransb=L2&AugerTransc=M3&LinenameSwitch=IUPAC&Linename1a=K&Linename1b=L3&Linename2=KA1_LINE&NISTcompound=Gadolinium+Oxysulfide&RadioNuclide=55Fe&Shell=K_SHELL&Energy=10.0&Theta=1.5707964&Phi=3.14159&MomentumTransfer=0.57032&CKTrans=FL12_TRANS&Density=1.0&PZ=1.0&submit=Go%21&Language=C
@@ -307,7 +307,7 @@ def f1f2_calc_nist(descriptor, energy, theta=3.0e-3, F=0, density=None, rough=0.
     # >>>> massFractions
     # {'name': 'Alanine', 'nElements': 4, 'density': 1.42, 'Elements': [1, 6, 7, 8],
     # 'massFractions': [0.07919, 0.404439, 0.157213, 0.359159]}
-    Zarray = xraylib.GetCompoundDataNISTByName(descriptor) # TODO:  this is not available in dabax
+    Zarray = material_constants_library.GetCompoundDataNISTByName(descriptor)
 
     # Zarray = parse_formula(descriptor)
     zetas = Zarray["Elements"]
@@ -337,9 +337,9 @@ def f1f2_calc_nist(descriptor, energy, theta=3.0e-3, F=0, density=None, rough=0.
     f1 = numpy.zeros_like(energy)
     f2 = numpy.zeros_like(energy)
     for i, zi in enumerate(zetas):
-        f1i = f1f2_calc(material_constants_library.AtomicNumberToSymbol(zi), energy, theta, F=1, verbose=verbose,
+        f1i = f1f2_calc(material_constants_library.AtomicNumberToSymbol(zi), energy, theta, F=1, verbose=False,
                         material_constants_library=material_constants_library)
-        f2i = f1f2_calc(material_constants_library.AtomicNumberToSymbol(zi), energy, theta, F=2, verbose=verbose,
+        f2i = f1f2_calc(material_constants_library.AtomicNumberToSymbol(zi), energy, theta, F=2, verbose=False,
                         material_constants_library=material_constants_library)
         f1 += f1i * weights[i]
         f2 += f2i * weights[i]
