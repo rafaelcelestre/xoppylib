@@ -10,17 +10,17 @@ def xoppy_calc_power(
                 dens                       = ['?']*5,
                 roughness                  = [0.0]*5,
                 flags                      = [1]*5,
-                NELEMENTS                  = 1,
+                nelements                  = 1,
                 FILE_DUMP                  = 0,
                 material_constants_library = None,
 ):
 
-    substance = substance[0:NELEMENTS+1]
-    thick     = thick[0:NELEMENTS+1]
-    angle     = angle[0:NELEMENTS+1]
-    dens      = dens[0:NELEMENTS+1]
-    roughness = roughness[0:NELEMENTS+1]
-    flags     = flags[0:NELEMENTS+1]
+    substance = substance[0:nelements]
+    thick     =     thick[0:nelements]
+    angle     =     angle[0:nelements]
+    dens      =      dens[0:nelements]
+    roughness = roughness[0:nelements]
+    flags     =     flags[0:nelements]
 
 
     if FILE_DUMP:
