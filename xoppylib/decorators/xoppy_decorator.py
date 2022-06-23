@@ -5,7 +5,7 @@ from dabax.dabax_xraylib import DabaxXraylib
 import xraylib
 
 from xoppylib.crystals.tools import bragg_calc2, bragg_calc, crystal_fh, mare_calc
-from xoppylib.scattering_functions.tools import f0_calc
+from xoppylib.scattering_functions import f0_calc
 
 
 class XoppyDecorator(object):
