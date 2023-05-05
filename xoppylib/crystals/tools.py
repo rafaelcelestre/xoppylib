@@ -349,6 +349,7 @@ def crystal_fh(input_dictionary,phot_in,theta=None,forceratio=0):
 
 
     phot_in = numpy.array(phot_in,dtype=float).reshape(-1)
+    theta = numpy.array(theta, dtype=float).reshape(-1)
 
     toangstroms = codata.h * codata.c / codata.e * 1e10
 
@@ -359,7 +360,7 @@ def crystal_fh(input_dictionary,phot_in,theta=None,forceratio=0):
         if theta is None:
             itheta[i] = numpy.arcsin(toangstroms*1e-8/phot/2/dspacing)
         else:
-            itheta[i] = theta
+            itheta[i] = theta[i]
 
         # print("energy= %g eV, theta = %15.13g deg"%(phot,itheta[i]*180/numpy.pi))
         if phot < energy[0] or phot > energy[-1]:
