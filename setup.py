@@ -54,7 +54,7 @@ except AttributeError:
 
 NAME = 'xoppylib'
 
-VERSION = '1.0.18'
+VERSION = '1.0.19'
 ISRELEASED = True
 
 DESCRIPTION = 'XOPPY library'
@@ -101,7 +101,7 @@ INSTALL_REQUIRES = (
     'oasys-srwpy',
     'pySRU',
     'h5py',
-    'dabax',
+    'dabax>=1.0.6',
 )
 
 SETUP_REQUIRES = (
