@@ -46,7 +46,7 @@ def xoppy_calc_ws(ENERGY=7.0, CUR=100.0, PERIOD=8.5, N=28.0, KX=0.0, KY=8.739999
             if tmp[0].isdigit():
                 tmp1 = numpy.fromstring(tmp, dtype=float, sep=' ')
                 cum += tmp1[1] * codata.e * 1e3
-                f.write("%f  %g  %f  %f \n" % (tmp1[0], tmp1[1], tmp1[1] * codata.e * 1e3, cum * estep))
+                f.write("%f  %g  %g  %g \n" % (tmp1[0], tmp1[1], tmp1[1] * codata.e * 1e3, cum * estep))
             else:
                 f.write("#UD " + tmp)
         f.close()
