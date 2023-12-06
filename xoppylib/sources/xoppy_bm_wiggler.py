@@ -23,15 +23,17 @@ def xoppy_calc_bm(MACHINE_NAME="ESRF bending magnet",RB_CHOICE=0,MACHINE_R_M=25.
                   PSI_MRAD_PLOT=1.0,PSI_MIN=-1.0,PSI_MAX=1.0,PSI_NPOINTS=500,TYPE_CALC=0,FILE_DUMP=0):
 
     # electron energy in GeV
-    gamma = BEAM_ENERGY_GEV*1e3 / srfunc.codata_mee
+    codata_mee = 1e-6 * codata.m_e * codata.c**2 / codata.e  # electron mass in meV
+    m2ev = codata.c * codata.h / codata.e
+    gamma = BEAM_ENERGY_GEV * 1e3 / codata_mee
 
     r_m = MACHINE_R_M      # magnetic radius in m
     if RB_CHOICE == 1:
-        r_m = srfunc.codata_me * srfunc.codata_c / srfunc.codata_ec / BFIELD_T * numpy.sqrt(gamma * gamma - 1)
+        r_m = codata.m_e * codata.c / codata.e / BFIELD_T * numpy.sqrt(gamma * gamma - 1)
 
     # calculate critical energy in eV
     ec_m = 4.0*numpy.pi*r_m/3.0/numpy.power(gamma,3) # wavelength in m
-    ec_ev = srfunc.m2ev / ec_m
+    ec_ev = m2ev / ec_m
 
     print("\nLorent factor gamma: %g" % (gamma))
     print("\nMagnetic radius: %g m" % (r_m))
@@ -75,7 +77,7 @@ def xoppy_calc_bm(MACHINE_NAME="ESRF bending magnet",RB_CHOICE=0,MACHINE_R_M=25.
 
         a6=numpy.zeros((8,len(energy_ev)))
         a1 = energy_ev
-        spectral_power = numpy.array(a5)*1e3 * srfunc.codata_ec
+        spectral_power = numpy.array(a5) * 1e3 * codata.e
 
         # calculate cumulated power
         if VER_DIV in [0,2]:
@@ -93,7 +95,7 @@ def xoppy_calc_bm(MACHINE_NAME="ESRF bending magnet",RB_CHOICE=0,MACHINE_R_M=25.
             print("\nPower from integral of spectrum (sum rule, WARNING: energy in LOG): %8.3f %s" % (cumulated_power[-1], cumulated_power_unit))
 
         a6[0, :] = (a1)
-        a6[1, :] = srfunc.m2ev * 1e10 / (a1)
+        a6[1, :] = m2ev * 1e10 / (a1)
         a6[2, :] = (a1)/ec_ev # E/Ec
         a6[3, :] = numpy.array(a5par)/numpy.array(a5)
         a6[4, :] = numpy.array(a5per)/numpy.array(a5)
@@ -126,7 +128,7 @@ def xoppy_calc_bm(MACHINE_NAME="ESRF bending magnet",RB_CHOICE=0,MACHINE_R_M=25.
         tmp = srfunc.sync_ang(1, angle_mrad, energy=PHOT_ENERGY_MIN, i_a=CURRENT_A, hdiv_mrad=HOR_DIV_MRAD, e_gev=BEAM_ENERGY_GEV, ec_ev=ec_ev)
         tmp.shape = -1
         a6[5,:] = tmp
-        a6[6,:] = a6[5,:] * srfunc.codata_ec * 1e3
+        a6[6,:] = a6[5,:] * codata.e * 1e3
 
         coltitles=['Psi[mrad]','Psi[rad]*Gamma','F','F s-pol','F p-pol','Flux[Ph/sec/0.1%bw/mrad(Psi)]','Power[Watts/eV/mrad(Psi)]']
 
@@ -151,7 +153,7 @@ def xoppy_calc_bm(MACHINE_NAME="ESRF bending magnet",RB_CHOICE=0,MACHINE_R_M=25.
                 ij += 1
                 a6[0,ij] = a[i]
                 a6[1,ij] = energy_ev[j]
-                a6[2,ij] = fm[i,j] * srfunc.codata_ec * 1e3
+                a6[2,ij] = fm[i,j] * codata.e * 1e3
                 a6[3,ij] = fm[i,j]
 
         coltitles=['Psi [mrad]','Photon Energy [eV]','Power [Watts/eV/mrad(Psi)]','Flux [Ph/sec/0.1%bw/mrad(Psi)]']
@@ -179,7 +181,7 @@ def xoppy_calc_bm(MACHINE_NAME="ESRF bending magnet",RB_CHOICE=0,MACHINE_R_M=25.
 
     # if TYPE_CALC == 0:
     #     if LOG_CHOICE == 0:
-    #         print("\nPower from integral of spectrum: %15.3f W"%(a5.sum() * 1e3*srfunc.codata_ec * (energy_ev[1]-energy_ev[0])))
+    #         print("\nPower from integral of spectrum: %15.3f W"%(a5.sum() * 1e3*codata.e * (energy_ev[1]-energy_ev[0])))
 
     return a6.T, fm, a, energy_ev
 

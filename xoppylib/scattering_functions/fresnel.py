@@ -1,4 +1,5 @@
 import numpy
+import scipy.constants as codata
 
 def reflectivity_fresnel(refraction_index_delta=1e-5,refraction_index_beta=0.0,\
                  grazing_angle_mrad=3.0,roughness_rms_A=0.0,photon_energy_ev=10000.0):
@@ -42,8 +43,7 @@ def reflectivity_fresnel(refraction_index_delta=1e-5,refraction_index_beta=0.0,\
     rp = rs*ratio
     runp = 0.5 * (rs + rp)
 
-    #TODO: do it in another way
-    from srxraylib.sources.srfunc import m2ev
+    m2ev = codata.c * codata.h / codata.e
 
     wavelength_m = m2ev / photon_energy_ev
     debyewaller = numpy.exp( -(4.0*numpy.pi*numpy.sin(theta1)*rough1/(wavelength_m*1e10))**2 )
