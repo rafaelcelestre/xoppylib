@@ -27,34 +27,42 @@ srundplug: Undulator spectra calculations. An easy (or not too difficult)
 
 __author__    = "Manuel Sanchez del Rio"
 __contact__   = "srio@esrf.eu"
-__copyright__ = "ESRF, 2014-2019"
+__copyright__ = "ESRF, 2014-2024"
 
 #
 #----------------------------  IMPORT ------------------------------------------
 #
 
+import array
+import copy
 import os
+import platform
+import shutil  # to copy files
 import sys
 import time
-import array
-import platform
 
 import numpy
-import shutil # to copy files
-
 
 #SRW
 
-USE_URGENT= True
+USE_URGENT = True
 USE_US = True
 USE_SRWLIB = True
 USE_PYSRU = False
+USE_JOBLIB = True
 
 if USE_SRWLIB:
+    USE_SRWLIB = False
     try:
-        import oasys_srw.srwlib as srwlib
+        import srwpy.srwlib as srwlib
+        USE_SRWLIB = True
+        print('SRW distribution of SRW')
     except:
-        USE_SRWLIB = False
+        import oasys_srw.srwlib as srwlib
+        USE_SRWLIB = True
+        print('OASYS distribution of SRW')
+    if USE_SRWLIB is False:
+        # USE_SRWLIB = False
         print("SRW is not available")
 
 
