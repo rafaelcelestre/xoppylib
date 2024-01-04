@@ -65,6 +65,14 @@ if USE_SRWLIB:
         # USE_SRWLIB = False
         print("SRW is not available")
 
+if USE_JOBLIB:
+    try:
+        import multiprocessing as mp
+
+        from joblib import Parallel, delayed
+    except:
+        print("Parallel calculations not available")
+
 
 #catch standard optput
 try:
@@ -77,16 +85,16 @@ try:
 except ImportError:
     print("failed to import matplotlib. Do not try to do on-line plots.")
 
-from srxraylib.plot.gol import plot, plot_contour, plot_surface, plot_image, plot_show
+import scipy.constants as codata
+from srxraylib.plot.gol import plot, plot_contour, plot_image, plot_show, plot_surface
 
 ########################################################################################################################
 #
 # GLOBAL NAMES
 #
 ########################################################################################################################
-
 # #Physical constants (global, by now)
-import scipy.constants as codata
+
 codata_mee = numpy.array(codata.physical_constants["electron mass energy equivalent in MeV"][0])
 m2ev = codata.c * codata.h / codata.e      # lambda(m)  = m2eV / energy(eV)
 
@@ -162,13 +170,19 @@ def calc1d_pysru(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,photonEnergyP
     t0 = time.time()
     print("Inside calc1d_pysru")
 
-    from pySRU.Simulation import create_simulation
     from pySRU.ElectronBeam import ElectronBeam
     from pySRU.MagneticStructureUndulatorPlane import MagneticStructureUndulatorPlane
-    from pySRU.TrajectoryFactory import TrajectoryFactory, TRAJECTORY_METHOD_ANALYTIC,TRAJECTORY_METHOD_ODE
-
-    from pySRU.RadiationFactory import RadiationFactory,RADIATION_METHOD_NEAR_FIELD, \
-                                     RADIATION_METHOD_APPROX_FARFIELD
+    from pySRU.RadiationFactory import (
+        RADIATION_METHOD_APPROX_FARFIELD,
+        RADIATION_METHOD_NEAR_FIELD,
+        RadiationFactory,
+    )
+    from pySRU.Simulation import create_simulation
+    from pySRU.TrajectoryFactory import (
+        TRAJECTORY_METHOD_ANALYTIC,
+        TRAJECTORY_METHOD_ODE,
+        TrajectoryFactory,
+    )
 
 
     myBeam = ElectronBeam(Electron_energy=bl['ElectronEnergy'], I_current=bl['ElectronCurrent'])
@@ -1382,8 +1396,7 @@ def calc3d_srw(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,photonEnergyPoi
         und0 = srwlib.SRWLMagFldU(_arHarm=magnetic_fields, _per=bl['PeriodID'], _nPer=bl['NPeriods'])
         und = srwlib.SRWLMagFldC([und0], array.array('d', [0]), array.array('d', [0]), array.array('d', [0]))
 
-
-    print('Running SRW (SRWLIB Python)')
+    # print('Running SRW (SRWLIB Python)')
     #
     # #***********UR Stokes Parameters (mesh) for Spectral Flux
     # stkF = srwlib.SRWLStokes() #for spectral flux vs photon energy
@@ -1399,8 +1412,6 @@ def calc3d_srw(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,photonEnergyPoi
     #**********************Calculation (SRWLIB function calls)
     print('Performing Spectral Flux 3d calculation ... ') # , end='')
     t0 = time.time()
-
-
 
     if zero_emittance:
         #
@@ -1436,8 +1447,6 @@ def calc3d_srw(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,photonEnergyPoi
         # Stokes0ToSpec(stk,fname=fileName)
         #
         # intensArray,eArray,hArray,vArray = Stokes0ToArrays(stk)
-
-
 
         Shape = (4,stk.mesh.ny,stk.mesh.nx,stk.mesh.ne)
         data = numpy.ndarray(buffer=stk.arS, shape=Shape,dtype=stk.arS.typecode)
@@ -1477,8 +1486,6 @@ def calc3d_srw(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,photonEnergyPoi
         wfr.allocate(mesh.ne, mesh.nx, mesh.ny)
         # eBeam = _srw_drift_electron_beam(eBeam, und)
         srwlib.srwl.CalcElecFieldSR(wfr, 0, und, paramME)
-
-
 
         #
         # Extract intensity
@@ -1638,7 +1645,7 @@ def calc3d_srw_step_by_step(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,ph
         und = srwlib.SRWLMagFldC([und0], array.array('d', [0]), array.array('d', [0]), array.array('d', [0]))
 
 
-    print('Running SRW (SRWLIB Python)')
+    # print('Running SRW (SRWLIB Python)')
     #
     # #***********UR Stokes Parameters (mesh) for Spectral Flux
     # stkF = srwlib.SRWLStokes() #for spectral flux vs photon energy
@@ -1775,6 +1782,185 @@ def calc3d_srw_step_by_step(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,ph
     # print("File written to disk: tmp.dat")
 
     return (eArray, 1e3*hArray, 1e3*vArray, intensArray)
+
+
+def calc3d_srw_logsparsed(bl, photonEnergyMin=3000.0, photonEnergyMax=55000.0, photonEnergyPoints=500,
+                          zero_emittance=False, hSlitPoints=51, vSlitPoints=51, fileName=None, fileAppend=False,):
+
+    r"""
+        run SRW for calculating intensity vs H,V,energy
+
+        input: a dictionary with beamline
+        output: file name with results
+    """
+
+    global scanCounter
+
+    print("Inside calc3d_srw_logsparsed")
+
+    stepSize = numpy.log(photonEnergyMax/photonEnergyMin)/photonEnergyPoints
+    steps = numpy.linspace(0, photonEnergyPoints, photonEnergyPoints+1)
+    eArray = photonEnergyMin*numpy.exp(steps*stepSize)
+
+    if zero_emittance:
+        eBeam = _srw_electron_beam(E=bl['ElectronEnergy'], Iavg=bl['ElectronCurrent'],)   # no emmitance now
+    else:
+        eBeam = _srw_electron_beam(E=bl['ElectronEnergy'], sigE = bl['ElectronEnergySpread'], Iavg=bl['ElectronCurrent'],
+                     sigX=bl['ElectronBeamSizeH'], sigY=bl['ElectronBeamSizeV'],
+                     sigXp=bl['ElectronBeamDivergenceH'], sigYp=bl['ElectronBeamDivergenceV'])
+    eBeam.partStatMom1.z = - bl['PeriodID'] * (bl['NPeriods'] + 4) / 2  # initial longitudinal positions
+
+    cte = codata.e/(2*numpy.pi*codata.electron_mass*codata.c)
+    B0 = bl['Kv']/bl['PeriodID']/cte
+
+    try:
+        B0x = bl['Kh'] / bl['PeriodID'] / cte
+    except:
+        B0x = 0.0
+
+    try:
+        Kphase = bl['Kphase']
+    except:
+        Kphase = 0.0
+
+    print('Running SRW (SRWLIB Python)')
+
+    if B0x == 0:    # *********** Conventional Undulator
+        und0 = srwlib.SRWLMagFldU([srwlib.SRWLMagFldH(1, 'v', B0)], bl['PeriodID'], bl['NPeriods'])
+        und = srwlib.SRWLMagFldC([und0], array.array('d', [0]), array.array('d', [0]), array.array('d', [0]))
+
+    else:           # *********** Undulator (elliptical)
+        magnetic_fields = []
+        magnetic_fields.append(srwlib.SRWLMagFldH(1, 'v',
+                                                  _B=B0,
+                                                  _ph=0.0,
+                                                  _s=1,  # 1=symmetrical, -1=antisymmetrical
+                                                  _a=1.0))
+        magnetic_fields.append(srwlib.SRWLMagFldH(1, 'h',
+                                                  _B=B0x,
+                                                  _ph=Kphase,
+                                                  _s=1,
+                                                  _a=1.0))
+        und0 = srwlib.SRWLMagFldU(_arHarm=magnetic_fields, _per=bl['PeriodID'], _nPer=bl['NPeriods'])
+        und = srwlib.SRWLMagFldC([und0], array.array('d', [0]), array.array('d', [0]), array.array('d', [0]))
+
+    # **********************Calculation (SRWLIB function calls)
+    print('Performing Spectral Flux 3d calculation ... ') # , end='')
+    t0 = time.time()
+
+    paramME = [1, 0.01, 0, 0, 50000, 1, 0]
+    t00 = 0
+
+    if USE_JOBLIB:
+        num_cores = mp.cpu_count()
+
+        # RC 14/DEC/2023 - even distribution of enery points is not the most adequate way of 
+        # splitting the energy array - higher energy points take longer to be calculated.
+        
+        # energy_chunks = numpy.array_split(list(eArray), num_cores)
+
+        # smart grid: lower energies (overrepresented in the log sparsed grid) are faster to be calculated.
+        # creating the energy_chunks makes it run even faster
+        dE = (photonEnergyMax - photonEnergyMin) / num_cores
+        energy_chunks = []
+        for i in range(num_cores):
+            bffr = copy.copy(eArray)
+            bffr = numpy.delete(bffr, bffr <= dE * (i))
+            if i + 1 != num_cores:
+                bffr = numpy.delete(bffr, bffr > dE * (i + 1))
+            energy_chunks.append(bffr)
+
+        results = Parallel(n_jobs=num_cores)(delayed(srw_energy_scan)(list_pairs,
+                                                                      bl,
+                                                                      eBeam,
+                                                                      und,
+                                                                      paramME,
+                                                                      hSlitPoints,
+                                                                      vSlitPoints,
+                                                                      zero_emittance,
+                                                                      USE_JOBLIB)
+                                             for list_pairs in energy_chunks)
+        energy_array = []
+        time_array = []
+        energy_chunks = []
+        k = 0
+        for stuff in results:
+            energy_array.append(stuff[3][0])
+            time_array.append(stuff[4])
+            energy_chunks.append(len(stuff[3]))
+            if k == 0:
+                intensArray = stuff[0]
+            else:
+                intensArray = numpy.concatenate((intensArray, stuff[0]), axis=0)
+            k+=1
+        print(">>> ellapse time:")
+        for ptime in range(len(time_array)):
+            print(f" Core {ptime+1}: {time_array[ptime]:.2f} s for {energy_chunks[ptime]} pts (E0 = {energy_array[ptime]:.1f} eV).")
+            
+        hArray = numpy.linspace(-bl['gapH'] / 2, bl['gapH'] / 2, hSlitPoints, )
+        vArray = numpy.linspace(-bl['gapV'] / 2, bl['gapV'] / 2, vSlitPoints, )
+
+    else:
+        intensArray, hArray, vArray, enArray, t = srw_energy_scan(eArray, bl, eBeam, und, paramME,
+                                                                  hSlitPoints, vSlitPoints, zero_emittance, USE_JOBLIB)
+
+
+    print('\n  done\n')
+    print('Done Performing Spectral Flux 3d calculation in sec '+str(time.time()-t0))
+
+    return (eArray, 1e3*hArray, 1e3*vArray, intensArray)
+
+
+def srw_energy_scan(energyArray, srwbln, elecBeam, und, paramME, hSlitPoints, vSlitPoints, zero_emittance, USE_JOBLIB):
+
+    tzero = time.time()
+    progress_step = int(energyArray.size / 10)
+    if progress_step == 0:
+        progress_step = 1
+
+    hArray = numpy.linspace(-srwbln['gapH'] / 2, srwbln['gapH'] / 2, hSlitPoints, )
+    vArray = numpy.linspace(-srwbln['gapV'] / 2, srwbln['gapV'] / 2, vSlitPoints, )
+    intensArray = numpy.zeros((energyArray.size, hArray.size, vArray.size,))
+
+    for ie in range(energyArray.size):
+        try:
+            if ie%progress_step == 0 and USE_JOBLIB is False:
+                print("Calculating photon energy: %f (point %d of %d)" % (energyArray[ie], ie, energyArray.size))
+
+            mesh = srwlib.SRWLRadMesh(energyArray[ie], energyArray[ie], 1,
+                                      -srwbln['gapH'] / 2, srwbln['gapH'] / 2, hSlitPoints,
+                                      -srwbln['gapV'] / 2, srwbln['gapV'] / 2, vSlitPoints, srwbln['distance'])
+
+            wfr = srwlib.SRWLWfr()
+            wfr.allocate(1, mesh.nx, mesh.ny)
+            wfr.mesh = mesh
+            wfr.partBeam = elecBeam
+
+            srwlib.srwl.CalcElecFieldSR(wfr, 0, und, paramME)
+            # print('Extracting stokes and filling output array... ')
+            mesh0 = wfr.mesh
+
+            INTENSITY_TYPE_SINGLE_ELECTRON=0
+            INTENSITY_TYPE_MULTI_ELECTRON=1
+
+            arI0 = array.array('f', [0]*mesh0.nx*mesh0.ny) #"flat" array to take 2D intensity data
+            # 6 is for total polarizarion; 0=H, 1=V
+            if zero_emittance:
+                srwlib.srwl.CalcIntFromElecField(arI0, wfr, 6, INTENSITY_TYPE_SINGLE_ELECTRON, 3, energyArray[ie], 0, 0)
+            else:
+                srwlib.srwl.CalcIntFromElecField(arI0, wfr, 6, INTENSITY_TYPE_MULTI_ELECTRON, 3, energyArray[ie], 0, 0)
+
+            Shape = (mesh0.ny, mesh0.nx)
+            data = numpy.ndarray(buffer=arI0, shape=Shape, dtype=arI0.typecode)
+
+            for ix in range(hArray.size):
+                for iy in range(vArray.size):
+                    intensArray[ie, ix, iy,] = data[iy, ix]
+        except:
+            print("Error running SRW")
+
+    return intensArray, hArray, vArray, energyArray, time.time()-tzero
+
 
 def calc3d_urgent(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,photonEnergyPoints=500,
                   zero_emittance=False,hSlitPoints=50,vSlitPoints=50,
@@ -2239,13 +2425,19 @@ def calc3d_pysru(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,photonEnergyP
         output: file name with results
     """
 
-    from pySRU.Simulation import create_simulation
     from pySRU.ElectronBeam import ElectronBeam
     from pySRU.MagneticStructureUndulatorPlane import MagneticStructureUndulatorPlane
-    from pySRU.TrajectoryFactory import TrajectoryFactory, TRAJECTORY_METHOD_ANALYTIC,TRAJECTORY_METHOD_ODE
-
-    from pySRU.RadiationFactory import RadiationFactory,RADIATION_METHOD_NEAR_FIELD, \
-                                     RADIATION_METHOD_APPROX_FARFIELD
+    from pySRU.RadiationFactory import (
+        RADIATION_METHOD_APPROX_FARFIELD,
+        RADIATION_METHOD_NEAR_FIELD,
+        RadiationFactory,
+    )
+    from pySRU.Simulation import create_simulation
+    from pySRU.TrajectoryFactory import (
+        TRAJECTORY_METHOD_ANALYTIC,
+        TRAJECTORY_METHOD_ODE,
+        TrajectoryFactory,
+    )
 
     global scanCounter
 

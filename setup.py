@@ -97,6 +97,7 @@ INSTALL_REQUIRES = (
     'setuptools',
     'numpy',
     'scipy',
+    'joblib',
     'srxraylib',
     'oasys-srwpy',
     'pySRU',

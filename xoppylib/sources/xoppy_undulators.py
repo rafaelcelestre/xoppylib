@@ -8,7 +8,7 @@ from collections import OrderedDict
 
 from xoppylib.sources.srundplug import calc1d_us, calc1d_srw, calc1d_urgent, calc1d_pysru
 from xoppylib.sources.srundplug import calc2d_us, calc2d_srw, calc2d_urgent, calc2d_pysru
-from xoppylib.sources.srundplug import calc3d_us, calc3d_srw, calc3d_urgent, calc3d_pysru, calc3d_srw_step_by_step
+from xoppylib.sources.srundplug import calc3d_us, calc3d_srw, calc3d_urgent, calc3d_pysru, calc3d_srw_step_by_step, calc3d_srw_logsparsed
 
 from xoppylib.fit_gaussian2d import fit_gaussian2d, info_params, twoD_Gaussian
 
@@ -334,7 +334,7 @@ def xoppy_calc_undulator_radiation(ELECTRONENERGY=6.04,ELECTRONENERGYSPREAD=0.00
 
 
     #TODO SPEC file can be removed
-    outFile = "undulator_radiation.spec"
+    outFile = None    # "undulator_radiation.spec"
 
     # Memorandum:
     # e = array with energy in eV
@@ -363,6 +363,13 @@ def xoppy_calc_undulator_radiation(ELECTRONENERGY=6.04,ELECTRONENERGYSPREAD=0.00
         code = "SRW"
         print("Undulator radiation calculation using SRW. Please wait...")
         e, h, v, p = calc3d_srw_step_by_step(bl, fileName=outFile, fileAppend=False, hSlitPoints=HSLITPOINTS,
+                                          vSlitPoints=VSLITPOINTS,
+                                          photonEnergyMin=photonEnergyMin, photonEnergyMax=photonEnergyMax,
+                                          photonEnergyPoints=photonEnergyPoints, zero_emittance=zero_emittance)
+    if METHOD == 222:
+        code = "SRW"
+        print("Undulator radiation calculation using SRW. Please wait...")
+        e, h, v, p = calc3d_srw_logsparsed(bl, fileName=outFile, fileAppend=False, hSlitPoints=HSLITPOINTS,
                                           vSlitPoints=VSLITPOINTS,
                                           photonEnergyMin=photonEnergyMin, photonEnergyMax=photonEnergyMax,
                                           photonEnergyPoints=photonEnergyPoints, zero_emittance=zero_emittance)
