@@ -1596,11 +1596,6 @@ def calc3d_srw_step_by_step(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,ph
     else:
         eArray = numpy.linspace(photonEnergyMin, photonEnergyMax, photonEnergyPoints, )
 
-
-
-
-
-
     if zero_emittance:
         eBeam = _srw_electron_beam(E=bl['ElectronEnergy'],Iavg=bl['ElectronCurrent'],) # no emmitance now
     else:
@@ -1644,112 +1639,53 @@ def calc3d_srw_step_by_step(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,ph
         und0 = srwlib.SRWLMagFldU(_arHarm=magnetic_fields, _per=bl['PeriodID'], _nPer=bl['NPeriods'])
         und = srwlib.SRWLMagFldC([und0], array.array('d', [0]), array.array('d', [0]), array.array('d', [0]))
 
-
-    # print('Running SRW (SRWLIB Python)')
-    #
-    # #***********UR Stokes Parameters (mesh) for Spectral Flux
-    # stkF = srwlib.SRWLStokes() #for spectral flux vs photon energy
-    # stkF.allocate(photonEnergyPoints, hSlitPoints, vSlitPoints) #numbers of points vs photon energy, horizontal and vertical positions
-    # stkF.mesh.zStart = bl['distance'] #longitudinal position [m] at which UR has to be calculated
-    # stkF.mesh.eStart = photonEnergyMin #initial photon energy [eV]
-    # stkF.mesh.eFin =   photonEnergyMax #final photon energy [eV]
-    # stkF.mesh.xStart = -bl['gapH']/2 #initial horizontal position [m]
-    # stkF.mesh.xFin =    bl['gapH']/2 #final horizontal position [m]
-    # stkF.mesh.yStart = -bl['gapV']/2 #initial vertical position [m]
-    # stkF.mesh.yFin =    bl['gapV']/2 #final vertical position [m]
-
     #**********************Calculation (SRWLIB function calls)
     print('Performing Spectral Flux 3d calculation ... ') # , end='')
     t0 = time.time()
-
-    hArray = numpy.linspace(-bl['gapH'] / 2, bl['gapH'] / 2, hSlitPoints, )
-    vArray = numpy.linspace(-bl['gapV'] / 2, bl['gapV'] / 2, vSlitPoints, )
-
-
-    intensArray = numpy.zeros((eArray.size, hArray.size, vArray.size,))
-    timeArray = numpy.zeros_like(eArray)
-
-
-    #
-    # convolution
-    #
-
-    # arPrecS = [0]*7 #for electric field and single-electron intensity
-    # arPrecS[0] = 1 #SR calculation method: 0- "manual", 1- "auto-undulator", 2- "auto-wiggler"
-    # arPrecS[1] = 0.01 #relative precision
-    # arPrecS[2] = 0 #longitudinal position to start integration (effective if < zEndInteg)
-    # arPrecS[3] = 0 #longitudinal position to finish integration (effective if > zStartInteg)
-    # arPrecS[4] = 20000 #Number of points for intermediate trajectory calculation
-    # arPrecS[5] = 1 #Use "terminating terms" (i.e. asymptotic expansions at zStartInteg and zEndInteg) or not (1 or 0 respectively)
-    # arPrecS[6] = -1 #0.1 #sampling factor for adjusting nx, ny (effective if > 0)
-
     paramME = [1, 0.01, 0, 0, 50000, 1, 0]
+ 
+    if USE_JOBLIB:
+        num_cores = mp.cpu_count()
+        
+        energy_chunks = numpy.array_split(list(eArray), num_cores)
 
-
-    t00 = 0
-    for ie in range(eArray.size):
-
-
-        print("Calculating photon energy: %f (point %d of %d) time:%g"%(eArray[ie],ie+1,eArray.size+1,time.time()-t00))
-        t00 = time.time()
-
-
-        try:
-            mesh = srwlib.SRWLRadMesh(eArray[ie], eArray[ie], 1,
-                                      -bl['gapH'] / 2, bl['gapH'] / 2, hSlitPoints,
-                                      -bl['gapV'] / 2, bl['gapV'] / 2, vSlitPoints, bl['distance'])
-
-
-
-            wfr = srwlib.SRWLWfr()
-            wfr.allocate(1, mesh.nx, mesh.ny)
-            # eBeam = _srw_drift_electron_beam(eBeam, und)
-            wfr.mesh = mesh
-            wfr.partBeam = eBeam
-
-
-
-            srwlib.srwl.CalcElecFieldSR(wfr, 0, und, paramME)
-
-
-
-            #
-            # Extract intensity
-            #
-
-            print('Extracting stokes and filling output array... ')
-            mesh0 = wfr.mesh
-            # arI0 = array.array('f', [0]*mesh0.nx*mesh0.ny) #"flat" array to take 2D intensity data
-            # arI0 = array.array('f', [0]*mesh0.nx*mesh0.ny*mesh.ne) #"flat" array to take 2D intensity data
-
-            INTENSITY_TYPE_SINGLE_ELECTRON=0
-            INTENSITY_TYPE_MULTI_ELECTRON=1
-
-            arI0 = array.array('f', [0]*mesh0.nx*mesh0.ny) #"flat" array to take 2D intensity data
-            # 6 is for total polarizarion; 0=H, 1=V
-            if zero_emittance:
-                srwlib.srwl.CalcIntFromElecField(arI0, wfr, 6, INTENSITY_TYPE_SINGLE_ELECTRON, 3, eArray[ie], 0, 0)
+        results = Parallel(n_jobs=num_cores)(delayed(srw_energy_scan)(list_pairs,
+                                                                      bl,
+                                                                      eBeam,
+                                                                      und,
+                                                                      paramME,
+                                                                      hSlitPoints,
+                                                                      vSlitPoints,
+                                                                      zero_emittance,
+                                                                      USE_JOBLIB)
+                                             for list_pairs in energy_chunks)
+        energy_array = []
+        time_array = []
+        energy_chunks = []
+        k = 0
+        for stuff in results:
+            energy_array.append(stuff[3][0])
+            time_array.append(stuff[4])
+            energy_chunks.append(len(stuff[3]))
+            if k == 0:
+                intensArray = stuff[0]
             else:
-                srwlib.srwl.CalcIntFromElecField(arI0, wfr, 6, INTENSITY_TYPE_MULTI_ELECTRON, 3, eArray[ie], 0, 0)
+                intensArray = numpy.concatenate((intensArray, stuff[0]), axis=0)
+            k+=1
+        print(">>> ellapse time:")
+        for ptime in range(len(time_array)):
+            print(f" Core {ptime+1}: {time_array[ptime]:.2f} s for {energy_chunks[ptime]} pts (E0 = {energy_array[ptime]:.1f} eV).")
+            
+        hArray = numpy.linspace(-bl['gapH'] / 2, bl['gapH'] / 2, hSlitPoints, )
+        vArray = numpy.linspace(-bl['gapV'] / 2, bl['gapV'] / 2, vSlitPoints, )
 
-            Shape = (mesh0.ny,mesh0.nx)
-            data = numpy.ndarray(buffer=arI0, shape=Shape,dtype=arI0.typecode)
-
-            for ix in range(hArray.size):
-                for iy in range(vArray.size):
-                    intensArray[ie,ix,iy,] = data[iy,ix]
-
-        except:
-            print("Error running SRW")
-
-
-        timeArray[ie] = time.time() - t00
+    else:
+        intensArray, hArray, vArray, enArray, t = srw_energy_scan(eArray, bl, eBeam, und, paramME,
+                                                                  hSlitPoints, vSlitPoints, zero_emittance, USE_JOBLIB)
 
 
-
-    print('  done\n')
+    print('\n  done\n')
     print('Done Performing Spectral Flux 3d calculation in sec '+str(time.time()-t0))
-
 
     if fileName is not None:
         print('  saving SE Stokes to h5 file %s...'%fileName)
@@ -1771,15 +1707,6 @@ def calc3d_srw_step_by_step(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,ph
             print("Data appended to file: %s"%(os.path.join(os.getcwd(),fileName)))
         else:
             print("File written to disk: %s"%(os.path.join(os.getcwd(),fileName)))
-
-    # grid in mm
-
-    # tmp = intensArray.sum(axis=2).sum(axis=1)
-    # f = open("tmp.dat",'w')
-    # for i in range(eArray.size):
-    #     f.write("%f %f %f\n"%(eArray[i],timeArray[i],tmp[i]))
-    # f.close()
-    # print("File written to disk: tmp.dat")
 
     return (eArray, 1e3*hArray, 1e3*vArray, intensArray)
 
@@ -1849,7 +1776,6 @@ def calc3d_srw_logsparsed(bl, photonEnergyMin=3000.0, photonEnergyMax=55000.0, p
     t0 = time.time()
 
     paramME = [1, 0.01, 0, 0, 50000, 1, 0]
-    t00 = 0
 
     if USE_JOBLIB:
         num_cores = mp.cpu_count()
