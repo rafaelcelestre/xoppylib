@@ -1,4 +1,3 @@
-
 import numpy
 import xraylib
 import scipy.constants as codata
@@ -14,27 +13,42 @@ import os
 import platform
 from xoppylib.xoppy_util import locations
 from dabax.dabax_xraylib import DabaxXraylib
-#
-#
-#
 
-
-def bragg_metrictensor(a,b,c,a1,a2,a3,RETURN_REAL_SPACE=0,RETURN_VOLUME=0,HKL=None):
+#
+#
+#
+def bragg_metrictensor(a, b, c, a1, a2, a3, RETURN_REAL_SPACE=0, RETURN_VOLUME=0, HKL=None):
     """
-    Returns the metric tensor in the reciprocal space
+    Returns the metric tensor in the reciprocal space.
 
-    :param a: unit cell a
-    :param b: unit cell b
-    :param c: unit cell c
-    :param a1: unit cell alpha
-    :param a2: unit cell beta
-    :param a3: unit cell gamma
-    :param RETURN_REAL_SPACE: set to 1 for returning metric tensor in real space
-    :param RETURN_VOLUME: set to 1 to return the unit cell volume in Angstroms^3
-    :param HKL: if !=None, returns the d-spacing for the corresponding [H,K,L] reflection
-    :return: the returned value depends on the keywords used. If RETURN_REAL_SPACE=0,RETURN_VOLUME=0, and HKL=None
+    Parameters
+    ----------
+    a: float
+        unit cell a
+    b: float
+        unit cell b
+    c: float
+        unit cell c
+    a1: float
+        unit cell alpha [in deg]
+    a2: float
+        unit cell beta [in deg]
+    a3: float
+        unit cell gamma [in deg]
+    RETURN_REAL_SPACE: int, optional
+        set to 1 for returning metric tensor in real space.
+    RETURN_VOLUME: int, optional
+        set to 1 to return the unit cell volume in Angstroms^3.
+    HKL: None, or list
+        if !=None, returns the d-spacing for the corresponding [H,K,L] reflection.
+
+    Returns
+    -------
+    The returned value depends on the keywords used. If RETURN_REAL_SPACE=0, RETURN_VOLUME=0, and HKL=None
              then retuns the metric tensor in reciprocal space.
+
     """
+
     # input cell a,b,c,alpha,beta,gamma; angles in degrees
     a1 *= numpy.pi / 180.0
     a2 *= numpy.pi / 180.0
@@ -85,18 +99,25 @@ def bragg_metrictensor(a,b,c,a1,a2,a3,RETURN_REAL_SPACE=0,RETURN_VOLUME=0,HKL=No
     else:
         return ginv
 
-def lorentz(theta_bragg_deg,return_what=0):
+def lorentz(theta_bragg_deg, return_what=0):
     """
     This function returns the Lorentz factor, polarization factor (unpolarized beam), geometric factor,
     or a combination of them.
 
-    :param theta_bragg_deg: Bragg angle in degrees
-    :param return_what: A flag indicating the returned variable:
-                        0: (default) PolFac*lorentzFac
-                        1: PolFac
-                        2: lorentzFac
-                        3: geomFac
-    :return: a scalar value
+    Parameters
+    ----------
+    theta_bragg_deg: float
+        Bragg angle in degrees.
+    return_what, int
+        0: (default) PolFac*lorentzFac
+        1: PolFac
+        2: lorentzFac
+        3: geomFac
+
+    Returns
+    -------
+    float
+
     """
     tr = theta_bragg_deg * numpy.pi / 180.
     polarization_factor = 0.5 * (1.0 + (numpy.cos(2.0 * tr))**2)
@@ -115,22 +136,43 @@ def lorentz(theta_bragg_deg,return_what=0):
         return polarization_factor*lorentz_factor*geometrical_factor
 
 # OBSOLETE.... USE bragg_calc2() INSTEAD!
-def bragg_calc(descriptor="Si",hh=1,kk=1,ll=1,temper=1.0,emin=5000.0,emax=15000.0,estep=100.0,fileout=None,
+def bragg_calc(descriptor="Si", hh=1, kk=1, ll=1, temper=1.0, emin=5000.0, emax=15000.0, estep=100.0, fileout=None,
                material_constants_library=xraylib):
     """
+    OBSOLETE.... USE bragg_calc2() INSTEAD!
     Preprocessor for Structure Factor (FH) calculations. It calculates the basic ingredients of FH.
 
-    :param descriptor: crystal name (as in xraylib)
-    :param hh: miller index H
-    :param kk: miller index K
-    :param ll: miller index L
-    :param temper: temperature factor (scalar <=1.0 )
-    :param emin:  photon energy minimum
-    :param emax: photon energy maximum
-    :param estep: photon energy step
-    :param fileout: name for the output file (default=None, no output file)
-    :return: a dictionary with all ingredients of the structure factor.
+
+
+    Parameters
+    ----------
+    descriptor: str, optional
+        crystal name (as in xraylib)
+    hh: int, optional
+        miller index H
+    kk: int, optional
+        miller index K
+    ll: int, optional
+        miller index L
+    temper: float, optional
+        temperature factor (scalar <=1.0 )
+    emin: float, optional
+        photon energy minimum in eV
+    emax: float, optional
+        photon energy maximum in eV
+    estep: float, optional
+        photon energy step in eV
+    fileout: None or str, optional
+        name for the output file (default=None, no output file)
+    material_constants_library: xraylib or instance of DabaxXraylib, optional
+        The pointer to the material library to be used to retrieve scattering data.
+
+    Returns
+    -------
+    dict
+
     """
+
 
     output_dictionary = {}
 
@@ -320,17 +362,28 @@ def bragg_calc(descriptor="Si",hh=1,kk=1,ll=1,temper=1.0,emin=5000.0,emax=15000.
 #
 #
 #
-def crystal_fh(input_dictionary,phot_in,theta=None,forceratio=0):
+def crystal_fh(input_dictionary, phot_in, theta=None, forceratio=0):
     """
+    Calculates the crystal structure factors.
 
-    :param input_dictionary: as resulting from bragg_calc()
-    :param phot_in: photon energy in eV
-    :param theta: incident angle (half of scattering angle) in rad
-    :return: a dictionary with structure factor
+    Parameters
+    ----------
+    input_dictionary: dict
+        as resulting from bragg_calc()
+    phot_in: float, numpy array
+        The photon energy in eV
+    theta: None or float or numpy array.
+        The incident angle (half of scattering angle) in rad. If None, it uses the Bragg angle.
+    forceratio: int, optional
+        0: calculates ratio = numpy.sin(itheta[i]) / (toangstroms / phot)
+        1: calculates ratio = 1 / (2 * dspacing * 1e8)
+
+    Returns
+    -------
+    dict
+        a dictionary with structure factor.
+
     """
-
-    # outfil    = input_dictionary["outfil"]
-    # fract     = input_dictionary["fract"]
     rn        = input_dictionary["rn"]
     dspacing  = numpy.array(input_dictionary["dspacing"])
     nbatom    = numpy.array(input_dictionary["nbatom"])
@@ -346,21 +399,16 @@ def crystal_fh(input_dictionary,phot_in,theta=None,forceratio=0):
     fpp       = numpy.array(input_dictionary["f2"])
     fraction = numpy.array(input_dictionary["fraction"])
 
-
-
-    phot_in = numpy.array(phot_in,dtype=float).reshape(-1)
-    theta = numpy.array(theta, dtype=float).reshape(-1)
-
+    phot_in = numpy.array(phot_in, dtype=float).reshape(-1)
     toangstroms = codata.h * codata.c / codata.e * 1e10
 
+    if theta is None:
+        itheta = numpy.arcsin(toangstroms * 1e-8 / phot_in / 2 / dspacing)
+    else:
+        theta = numpy.array(theta, dtype=float).reshape(-1)
+        itheta = theta
 
-    itheta = numpy.zeros_like(phot_in)
     for i,phot in enumerate(phot_in):
-
-        if theta is None:
-            itheta[i] = numpy.arcsin(toangstroms*1e-8/phot/2/dspacing)
-        else:
-            itheta[i] = theta[i]
 
         # print("energy= %g eV, theta = %15.13g deg"%(phot,itheta[i]*180/numpy.pi))
         if phot < energy[0] or phot > energy[-1]:
@@ -438,21 +486,12 @@ def crystal_fh(input_dictionary,phot_in,theta=None,forceratio=0):
         # ;C multiply by the average temperature factor
         # ;C
 
-
-        # FH      *= TEMPER_AVE
-        # FHr     *= TEMPER_AVE
-        # FHi     *= TEMPER_AVE
-        # FH_BAR  *= TEMPER_AVE
-        # FH_BARr *= TEMPER_AVE
-        # FH_BARi *= TEMPER_AVE
-
         STRUCT = numpy.sqrt(FH * FH_BAR)
 
         # ;C
         # ;C   PSI_CONJ = F*( note: PSI_HBAR is PSI at -H position and is
         # ;C   proportional to fh_bar but PSI_CONJ is complex conjugate os PSI_H)
         # ;C
-
 
         psi_over_f = rn * r_lam0**2 / numpy.pi
         psi_h      = rn * r_lam0**2 / numpy.pi * FH
@@ -467,7 +506,6 @@ def crystal_fh(input_dictionary,phot_in,theta=None,forceratio=0):
         # ;
         # ; Darwin width
         # ;
-        # print(rn,r_lam0,STRUCT,itheta)
         ssvar = rn * (r_lam0**2) * STRUCT / numpy.pi / numpy.sin(2.0*itheta)
         spvar = ssvar * numpy.abs((numpy.cos(2.0*itheta)))
         ssr = ssvar.real
@@ -480,7 +518,6 @@ def crystal_fh(input_dictionary,phot_in,theta=None,forceratio=0):
         REFRAC = (1.0+0j) - r_lam0**2 * rn * F_0 / 2/ numpy.pi
         DELTA_REF = 1.0 - REFRAC.real
         ABSORP = 4.0 * numpy.pi * (-REFRAC.imag) / r_lam0
-
 
         txt = ""
         txt += '\n******************************************************'
@@ -550,22 +587,42 @@ def bragg_calc2(descriptor="YB66", hh=1, kk=1, ll=1, temper=1.0,
     """
     Preprocessor for Structure Factor (FH) calculations. It calculates the basic ingredients of FH.
 
-    :param descriptor: crystal name (as in xraylib)
-    :param hh: miller index H
-    :param kk: miller index K
-    :param ll: miller index L
-    :param temper: temperature factor (scalar <=1.0 )
-    :param emin:  photon energy minimum
-    :param emax: photon energy maximum
-    :param estep: photon energy step
-    :param ANISO_SEL: source of temperature factor:
-                0: use scalar value defined in temper
-                1: use isotropic value calculated from keyword UNIANISO_COFF in dabax Crystal.dat file
-                2: use anisotropic value calculated from keyword UNIANISO_COFF in dabax Crystal.dat file
-    :param fileout: name for the output file (default=None, no output file)
-    :return: a dictionary with all ingredients of the structure factor.
-    """
 
+    Parameters
+    ----------
+    descriptor: str, optional
+        crystal name (as in xraylib)
+    hh: int, optional
+        miller index H
+    kk: int, optional
+        miller index K
+    ll: int, optional
+        miller index L
+    temper: float, optional
+        temperature factor (scalar <=1.0 )
+    emin: float, optional
+        photon energy minimum in eV
+    emax: float, optional
+        photon energy maximum in eV
+    estep: float, optional
+        photon energy step in eV
+    ANISO_SEL: int, optional
+        0: Do not use anisotropy.
+        1: Use anisotropy.
+    fileout: None or str, optional
+        name for the output file (default=None, no output file)
+    do_not_prototype: int, optional
+        for computing the structure factor, 0=sum over site groups (recommended), 1=sum over each individual sites
+    verbose: int, optional
+        Set to 1 for verbose output.
+    material_constants_library: xraylib or instance of DabaxXraylib, optional
+        The pointer to the material library to be used to retrieve scattering data.
+
+    Returns
+    -------
+    dict
+        a dictionary with all ingredients of the structure factor.
+    """
     output_dictionary = {}
 
     codata_e2_mc2 = codata.e ** 2 / codata.m_e / codata.c ** 2 / (4 * numpy.pi * codata.epsilon_0)  # in m
@@ -684,46 +741,6 @@ def bragg_calc2(descriptor="YB66", hh=1, kk=1, ll=1, temper=1.0,
 
     number_of_prototypical_atoms = len(indices_prototypical)
 
-    # for i in range(number_of_prototypical_atoms):
-    #     print("   >>> ", i, indices_prototypical[i], labels_prototypical[indices_prototypical[i]])
-    #
-    # for i in indices_prototypical:
-    #     print("   >>>>> ", i, labels_prototypical[i])
-    #
-    # print(">>>>  list_labels", len(labels_prototypical), len(indices_prototypical), labels_prototypical)
-
-    #
-    # get f0 coefficients
-    #
-
-    # f0coeffs = []
-    # if sourceF0 == 0:
-    #     for i in indices_prototypical:
-    #         f0coeffs.append(f0_xop(atom[i]['Zatom']))
-    # elif sourceF0 == 1:
-    #     for i in indices_prototypical:
-    #             f0coeffs.append(material_constants_library.f0_with_fractional_charge(atom[i]['Zatom'], atom[i]['charge']) )
-    # elif sourceF0 == 2:
-    #     total_charge_flag = numpy.abs(numpy.array(list_charge)).sum() # note the abs(): to be used as flag...
-    #
-    #     if total_charge_flag != 0: # Use dabax
-    #         for i in indices_prototypical:
-    #             f0coeffs.append(material_constants_library.f0_with_fractional_charge(atom[i]['Zatom'], atom[i]['charge']))
-    #     else: # use xraylib
-    #         if 'AtomicName' not in atom[0].keys():
-    #             for i in indices_prototypical:  #normal case come in here
-    #                 f0coeffs.append(f0_xop(atom[i]['Zatom']))
-    #         else:   #for case with like 'Y3+' entries in f0_xop
-    #             import re
-    #             for i in indices_prototypical:
-    #                 x = atom[i]['AtomicName']
-    #                 tmp_x = re.search('(^[a-zA-Z]*)',x)
-    #                 if tmp_x.group(0) == x:
-    #                     f0coeffs.append(f0_xop(atom[i]['Zatom']))  #neutral atom
-    #                 else:
-    #                     f0coeffs.append(f0_xop(0,AtomicName=x))    #charged atom
-
-
     f0coeffs = []
     for i in indices_prototypical:
         try:
@@ -766,13 +783,6 @@ def bragg_calc2(descriptor="YB66", hh=1, kk=1, ll=1, temper=1.0,
     txt += "# for each type of element-site, COOR_NR=G_0\n"
     list_multiplicity = []
     for i in indices_prototypical:
-        # zz = list_AtomicName[i]
-        # fraction = list_fraction[i]
-        # temper = list_temper[i]
-        # count = 0
-        # for j in range(len(list_Zatom)):
-        #     if (list_AtomicName[j] == zz) and (list_fraction[j] == fraction) and (list_temper[j] == temper): count += 1
-
         if do_not_prototype:
             txt += "%d " % 1
             list_multiplicity.append(1)
@@ -784,7 +794,6 @@ def bragg_calc2(descriptor="YB66", hh=1, kk=1, ll=1, temper=1.0,
             list_multiplicity.append(count)
     txt += "\n"
     output_dictionary["G_0"] = list_multiplicity
-
 
     txt += "# for each type of element-site, G and G_BAR (both complex)\n"
     list_g = []
@@ -879,15 +888,34 @@ def bragg_calc2(descriptor="YB66", hh=1, kk=1, ll=1, temper=1.0,
 
     if fileout != None:
         bragg_preprocessor_file_v2_write(output_dictionary, fileout)
-        # with open(fileout, "w") as f:
-        #     f.write(txt)
-        # if verbose: print("File written to disk: %s" % fileout)
 
     return output_dictionary
 
 # todo: rename
-def TemperFactor(sinTheta_lambda,anisos,Miller={'h':1,'k':1,'l':1},cell={'a':23.44,'b':23.44,'c':23.44},n=1936):
-    '''
+def TemperFactor(sinTheta_lambda, anisos, Miller={'h':1,'k':1,'l':1}, cell={'a':23.44,'b':23.44,'c':23.44}, n=1936):
+    """
+    Calculation isotropic & anisotropic temerature factors.
+
+    Parameters
+    ----------
+    sinTheta_lambda: float
+        Sin(theta)/lambda, lambda in units of Angstrom.
+    anisos: numpy array
+        array of dictionary containing anisotropic coefficients.
+    Miller: dict
+        The miller indices, example: {'h':1,'k':1,'l':1}.
+    cell: dict
+        The cell a,b,c parameters, example: {'a':23.44,'b':23.44,'c':23.44}
+    n: int, optional
+        number of atomic sites.
+
+    Returns
+    -------
+    list
+        output results in a 2-elements list: [[sotropic],[anisotropic]].
+
+    """
+
     #+
     # Singapore Synchrotron Light Source (SSLS)
     # :Author: X.J. Yu, slsyxj@nus.edu.sg
@@ -901,35 +929,36 @@ def TemperFactor(sinTheta_lambda,anisos,Miller={'h':1,'k':1,'l':1},cell={'a':23.
     #     anisos: array of dictionary containing anisotropic coefficients
     #     Out: output results in a 2-elements list: [[sotropic],[anisotropic]]
     #-
-    '''
+
     #0: isotropic, 1: anisotropic temerature factors
     # results = numpy.zeros([2,n])
     results = numpy.zeros([3,n]) # srio adds "start"
 
-    for i,aniso in enumerate(anisos):
-        s = aniso['start']-1
+    for i, aniso in enumerate(anisos):
+        s = aniso['start'] - 1
         e = aniso['end']
         if aniso['beta11'] >= 1:
             #if beta11>=1, then beta22 is Beq, the other fields are unused
             #if Beq specified, anisotropic temperature factor same as isotropic
             Beq = aniso['beta22']
-            results[1,s:e] = numpy.exp(-sinTheta_lambda*sinTheta_lambda*Beq)
+            results[1, s:e] = numpy.exp(-sinTheta_lambda * sinTheta_lambda*Beq)
         else:
-            Beq = 4.0/3.0*( aniso['beta11']*cell['a']*cell['a']+aniso['beta22']*cell['b']*cell['b']+ \
-                aniso['beta33']*cell['c']*cell['c'] ) # this is true only for cubic, tetragonal and orthorhombic Giacovazzo pag 188
-            results[1,s:e] = numpy.exp(-(aniso['beta11']*Miller['h']*Miller['h'] + \
-                  aniso['beta22']*Miller['k']*Miller['k'] + aniso['beta33']*Miller['l']*Miller['l'] + \
-                  2.0*Miller['h']*Miller['k']*aniso['beta12'] + 2.0*Miller['h']*Miller['l']*aniso['beta13'] + 2.0*Miller['k']*Miller['l']*aniso['beta23']))
-        results[0,s:e] = numpy.exp(-sinTheta_lambda*sinTheta_lambda*Beq)
+            Beq = 4.0 / 3.0 * ( aniso['beta11'] * cell['a'] * cell['a'] + aniso['beta22'] * cell['b'] * cell['b']+ \
+                aniso['beta33'] * cell['c'] * cell['c'] ) # this is true only for cubic, tetragonal and orthorhombic Giacovazzo pag 188
+            results[1,s:e] = numpy.exp(-(aniso['beta11'] * Miller['h'] * Miller['h'] + \
+                  aniso['beta22'] * Miller['k'] * Miller['k'] + aniso['beta33'] * Miller['l'] * Miller['l'] + \
+                  2.0 * Miller['h'] * Miller['k'] * aniso['beta12'] + 2.0 * Miller['h'] * Miller['l'] * aniso['beta13'] + \
+                                         2.0 * Miller['k'] * Miller['l'] * aniso['beta23']))
+        results[0,s:e] = numpy.exp(-sinTheta_lambda * sinTheta_lambda * Beq)
 
         results[2, s:e] = s
 
     return results
 
-def mare_calc(descriptor,H,K,L,HMAX,KMAX,LMAX,FHEDGE,DISPLAY,lambda1,deltalambda,PHI,DELTAPHI,
+def mare_calc(descriptor, H, K, L, HMAX, KMAX, LMAX, FHEDGE, DISPLAY, lambda1, deltalambda, PHI, DELTAPHI,
               material_constants_library=xraylib,verbose=0):
     """
-        Calculates:
+    Calculates:
 
       - Spaghetti plots (lambda versis Psi for multiple crystal reflection)
 
@@ -940,7 +969,6 @@ def mare_calc(descriptor,H,K,L,HMAX,KMAX,LMAX,FHEDGE,DISPLAY,lambda1,deltalambda
       Psi is the azimutal angle of totation, i.e., the totation around
         the H vector (main reflection)
 
-
      In other words, if a crystal is set with a particular Bragg angle to match a given reflection (inputs: H,K,L) at
      a given wavelength (input: WaveLength), many other (secondary) reflections are excited when the crystal is rotated
      around the azimutal angle Psi, without changing the Bragg angle.
@@ -949,39 +977,62 @@ def mare_calc(descriptor,H,K,L,HMAX,KMAX,LMAX,FHEDGE,DISPLAY,lambda1,deltalambda
      up to a maximum reflection (input: H Max,  K Max, L Max).
 
      Umweg plot:
+
      The intersection of these curves with an horizontal line at the wavelength of the primary reflection
      (input: WaveLength) gives the position of the peaks in the unweg plot. The width of each peak depends on the
      pendent of the curve at the intersection. For that, the Psi1 and Psi2 intersection angles with a band of width
      (input: DeltaWaveLength) are calculated. With this width and the intensity of the diffraction line, it is possible
      to compute a Gaussian that "roughly" describe the peak.
 
-
      Glitches plot:
+
      The intersection of these curves with a vertical line at a given Psi gives the position of the peaks in the
      glitches plot. The width of each peak is the difference between the wavelength values for Psi+/-DeltaPsi
      With this width and the intensity of the diffraction line, it is possible to compute a Gaussian that "roughly"
      describe the peak.
 
 
-    :param descriptor: a valid crystal name for xraylib
-    :param H:    the miller index H
-    :param K:    the miller index K
-    :param L:    the miller index L
-    :param HMAX: the maximum miller index H
-    :param KMAX: the maximum miller index K
-    :param LMAX: the maximum miller index L
-    :param FHEDGE: below this edge (structure factor value) the reflections are discarded
-    :param DISPLAY:
+    Parameters
+    ----------
+    descriptor: str
+        a valid crystal name for xraylib.
+    H: int
+        the miller index H.
+    K: int
+        the miller index K.
+    L: int
+        the miller index L.
+    HMAX: int
+        the maximum miller index H.
+    KMAX: int
+        the maximum miller index K.
+    LMAX: int
+        the maximum miller index L.
+    FHEDGE: float
+        below this edge (structure factor value) the reflections are discarded.
+    DISPLAY: int
             0: Create spaghetti plot script
-            0: Create spaghetti+Umweg plot scripts
-            0: Create spaghetti+Glitches plot scripts
-            0: Create spaghetti+Umweg+Glitches plot scripts
-    :param lambda1: wavelength in Angstroms for Umweg plot
-    :param deltalambda: delta wavelength in Angstroms for Umweg plot
-    :param PHI: phi angle in deg for the Glitches plot
-    :param DELTAPHI: delta phi angle in deg for the Glitches plot
-    :param verbose: set to 1 for a more verbose output
-    :return:
+            1: Create spaghetti+Umweg plot scripts
+            2: Create spaghetti+Glitches plot scripts
+            3: Create spaghetti+Umweg+Glitches plot scripts
+    lambda1: float
+        wavelength in Angstroms for Umweg plot.
+    deltalambda: float
+        delta wavelength in Angstroms for Umweg plot.
+    PHI: float
+        phi angle in deg for the Glitches plot.
+    DELTAPHI: float
+        delta phi angle in deg for the Glitches plot.
+    material_constants_library: xraylib or instance of DabaxXraylib, optional
+        The pointer to the material library to be used to retrieve scattering data.
+    verbose: int, optional
+        set to 1 for a more verbose output
+
+    Returns
+    -------
+    str
+        A script to create the plots.
+
     """
 
     list_of_scripts = []
@@ -1402,50 +1453,55 @@ def calc_temperature_factor(temperature, crystal='Si', debyeTemperature=644.92,
                             material_constants_library=xraylib
                           ):
     """
-    Calculates the (Debye) temperature factor for single crystals.
+    Calculates the (Debye) temperature factor for single crystals. See [1]_, [2]_.
 
     Parameters
     ----------
-    temperature : float
+    temperature: float
         Crystal temperature in Kelvin (positive number).
-    crystal : str
-        Crystal single-element symbol (e.g. Si, Ge, ...).
-    debyeTemperature : float
+    crystal: str, optional
+        Crystal descriptor (e.g. Si, Ge, ...).
+    debyeTemperature: float, optional
         Debye temperature of the crystal material in Kelvin.
-    millerIndex : array-like (1D), optional
+    millerIndex: list or numpy array, optional
         Miller indexes of the crystal orientation. For use with xraylib only.
-    atomicMass : float, optional.
+    atomicMass: float, optional
         Atomic mass of the crystal element (amu unit). if atomicMass == 0, get from xraylib.
-    dSpacing : float, optional.
+    dSpacing: float, optional
         dSpacing in Angstroms, given the crystal and millerIndex . if dSpacing == 0, get from xraylib.
+    material_constants_library: xraylib or instance of DabaxXraylib, optional
+        The pointer to the material library to be used to retrieve scattering data.
 
-    Returns:
-    --------
-    temperatureFactor : float
+    Returns
+    -------
+    float
+        The temperature factor.
 
-    Examples:
-    ---------
-        ### using xraylib:
+    References
+    ----------
 
-        >>> calc_temperature_factor(80, crystal='Si', millerIndex=[3,1,1], debyeTemperature=644.92, dSpacing=0, atomicMass=0)
-        0.983851994268226
+    .. [1]: A. Freund, Nucl. Instrum. and Meth. 213 (1983) 495-501
 
-
-        ### forcing it to use given dSpacing and atomicMass:
-
-        >>> calc_temperature_factor(80, crystal='Si', millerIndex=[1,1,1], debyeTemperature=644.92, atomicMass=28.09, dSpacing=3.1354163)
-        0.9955698950510736
-
-    References:
-    -----------
-
-    [1]: A. Freund, Nucl. Instrum. and Meth. 213 (1983) 495-501
-
-    [2]: M. Sanchez del Rio and R. J. Dejus, "Status of XOP: an x-ray optics software toolkit",
+    .. [2]: M. Sanchez del Rio and R. J. Dejus, "Status of XOP: an x-ray optics software toolkit",
          SPIE proc. vol. 5536 (2004) pp.171-174
 
-    Written: Sergio Lordano, M. Sanchez del Rio based on XOP/IDL routine (2022-01-21)
     """
+
+    # Written: Sergio Lordano, M. Sanchez del Rio based on XOP/IDL routine (2022-01-21)
+
+    # Examples:
+    # ---------
+    #     ### using xraylib:
+    #
+    #     >>> calc_temperature_factor(80, crystal='Si', millerIndex=[3,1,1], debyeTemperature=644.92, dSpacing=0, atomicMass=0)
+    #     0.983851994268226
+    #
+    #
+    #     ### forcing it to use given dSpacing and atomicMass:
+    #
+    #     >>> calc_temperature_factor(80, crystal='Si', millerIndex=[1,1,1], debyeTemperature=644.92, atomicMass=28.09, dSpacing=3.1354163)
+    #     0.9955698950510736
+
 
     def debyeFunc(x):
         return x / (numpy.exp(-x) - 1)
@@ -1488,17 +1544,9 @@ def calc_temperature_factor(temperature, crystal='Si', debyeTemperature=644.92,
     temperatureFactor = numpy.exp(-M)
 
     return temperatureFactor
-#
-#
-#
-#
-#
-# import sys
-# import os
-# import platform
-# from xoppylib.xoppy_util import locations
-# from xoppylib.crystals.tools import bragg_calc, bragg_calc2
 
+
+# todo: delete?
 def run_diff_pat(
     bragg_dict,
     preprocessor_file="xcrystal.bra",
@@ -1522,32 +1570,6 @@ def run_diff_pat(
     FILECOMPLIANCE   = "mycompliance.dat",
     # material_constants_library=None,
     ):
-
-    # if SCAN == 3:  # energy scan
-    #     emin = SCANFROM - 1
-    #     emax = SCANTO + 1
-    # else:
-    #     emin = ENERGY - 100.0
-    #     emax = ENERGY + 100.0
-    #
-    # print("Using crystal descriptor: ", CRYSTAL_DESCRIPTOR)
-    #
-    # for file in ["xcrystal.bra"]:
-    #     try:
-    #         os.remove(os.path.join(locations.home_bin_run(), file))
-    #     except:
-    #         pass
-    #
-    # bragg_dictionary = bragg_calc2(descriptor=CRYSTAL_DESCRIPTOR,
-    #                               hh=MILLER_INDEX_H, kk=MILLER_INDEX_K, ll=MILLER_INDEX_L,
-    #                               temper=float(TEMPER),
-    #                               emin=emin, emax=emax,
-    #                               estep=(SCANTO - SCANFROM) / SCANPOINTS, fileout="xcrystal.bra",
-    #                               material_constants_library=material_constants_library,
-    #                               )
-
-
-    #####################################################################################
 
     for file in ["diff_pat.dat", "diff_pat.gle", "diff_pat.par", "diff_pat.xop"]:
         try:
@@ -1658,8 +1680,6 @@ def run_diff_pat(
     os.system(command)
     print("\n--------------------------------------------------------\n")
 
-    #####################################################################################
-
 if __name__ == "__main__":
 
     from dabax.dabax_xraylib import DabaxXraylib
@@ -1673,20 +1693,20 @@ if __name__ == "__main__":
                    fileout="bragg_v2_dabax.dat", material_constants_library=dx)
 
 
-    tmp = bragg_calc2(descriptor="Si",hh=1,kk=1,ll=1,temper=1.0,emin=5000.0,emax=15000.0,estep=100.0,
-               fileout="bragg_v2_xraylib.dat", material_constants_library=xraylib )
+        tmp = bragg_calc2(descriptor="Si",hh=1,kk=1,ll=1,temper=1.0,emin=5000.0,emax=15000.0,estep=100.0,
+                   fileout="bragg_v2_xraylib.dat", material_constants_library=xraylib )
 
-    tmp = bragg_calc2(descriptor="Si",hh=1,kk=1,ll=1,temper=1.0,emin=5000.0,emax=15000.0,estep=100.0,
-               fileout="bragg_v2_dabax.dat", material_constants_library=dx)
+        tmp = bragg_calc2(descriptor="Si",hh=1,kk=1,ll=1,temper=1.0,emin=5000.0,emax=15000.0,estep=100.0,
+                   fileout="bragg_v2_dabax.dat", material_constants_library=dx)
 
 
-    tmp = bragg_calc2(descriptor="YB66", hh=1, kk=1, ll=1, temper=1.0,
-                emin=5000.0, emax=15000.0, estep=100.0,
-                ANISO_SEL=0,
-                fileout="bragg_yb66.dat",
-                do_not_prototype=0, # 0=use site groups (recommended), 1=use all individual sites
-                verbose=True,
-                material_constants_library=dx)
+        tmp = bragg_calc2(descriptor="YB66", hh=1, kk=1, ll=1, temper=1.0,
+                    emin=5000.0, emax=15000.0, estep=100.0,
+                    ANISO_SEL=0,
+                    fileout="bragg_yb66.dat",
+                    do_not_prototype=0, # 0=use site groups (recommended), 1=use all individual sites
+                    verbose=True,
+                    material_constants_library=dx)
 
 
     if False:
@@ -1697,7 +1717,7 @@ if __name__ == "__main__":
         print(m2)
 
 
-    if True:
+    if False:
         t1 = calc_temperature_factor(80, crystal='Si', millerIndex=[3, 1, 1], debyeTemperature=644.92, dSpacing=0,
                                      atomicMass=0)
 
@@ -1709,3 +1729,20 @@ if __name__ == "__main__":
         print("temperature factor Si: ", t1, t2)
         assert (numpy.abs(t1 - 0.983851994268226) < 1e-3)
         assert (numpy.abs(t2 - 0.9955698950510736) < 1e-3)
+
+
+    if True:
+
+
+        bragg_dictionary = bragg_calc2(descriptor="YB66", hh=1, kk=1, ll=1, temper=1.0,
+                    emin=5000.0, emax=15000.0, estep=100.0,
+                    ANISO_SEL=0,
+                    fileout="bragg_yb66.dat",
+                    do_not_prototype=0, # 0=use site groups (recommended), 1=use all individual sites
+                    verbose=True,
+                    material_constants_library=dx)
+
+
+        ienergy = 6000.0
+        dic2 = crystal_fh(bragg_dictionary, ienergy)
+        print("Energy=%g eV FH=(%g,%g)" % (ienergy, dic2["STRUCT"].real, dic2["STRUCT"].imag))
