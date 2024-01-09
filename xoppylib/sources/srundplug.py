@@ -300,7 +300,7 @@ def calc1d_srw(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,photonEnergyPoi
 
     Nmax = srw_max_harmonic_number # 21,61
 
-    print('Running SRW (SRWLIB Python)')
+    # print('Running SRW (SRWLIB Python)')
 
     if B0x == 0:    #*********** Conventional Undulator
         harmB = srwlib.SRWLMagFldH() #magnetic field harmonic
@@ -444,7 +444,7 @@ def calc1d_srw(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,photonEnergyPoi
     return (eArray,intensArray)
 
 
-def calc1d_srw_bis(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,photonEnergyPoints=500,zero_emittance=False,
+def calc1d_srw_on_axis(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,photonEnergyPoints=500,zero_emittance=False,
               srw_max_harmonic_number=None,fileName=None,fileAppend=False):
 
     r"""
@@ -457,7 +457,7 @@ def calc1d_srw_bis(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,photonEnerg
     global scanCounter
 
     t0 = time.time()
-    print("Inside calc1d_srw")
+    print("Inside calc1d_srw_on_axis")
     
     cte = codata.e/(2*numpy.pi*codata.electron_mass*codata.c)
     B0 = bl['Kv']/bl['PeriodID']/cte
@@ -494,7 +494,7 @@ def calc1d_srw_bis(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,photonEnerg
     ycID = 0
     zcID = 0
     sB = 1              # Symmetry of the Horizontal field component vs Longitudinal position
-    print('Running SRW (SRWLIB Python)')
+    # print('Running SRW (SRWLIB Python)')
     if B0x == 0:    #*********** Conventional Undulator   
         # harmB = srwlib.SRWLMagFldH() #magnetic field harmonic
         # harmB.n = 1 #harmonic number ??? Mostly asymmetry
@@ -597,10 +597,10 @@ def calc1d_srw_bis(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,photonEnerg
     wfr.mesh.zStart = bl['distance']   # Longitudinal Position [m] at which SR has to be calculated
     wfr.mesh.eStart = photonEnergyMin  # Initial Photon Energy [eV]
     wfr.mesh.eFin = photonEnergyMax    # Final Photon Energy [eV]
-    wfr.mesh.xStart = bl['gapHcenter'] - bl['gapH']/2  # Initial Horizontal Position [m]
-    wfr.mesh.xFin =  bl['gapHcenter'] + bl['gapH']/2   # Final Horizontal Position [m]
-    wfr.mesh.yStart = bl['gapVcenter'] - bl['gapV']/2  # Initial Vertical Position [m]
-    wfr.mesh.yFin = bl['gapVcenter'] + bl['gapV']/2    # Final Vertical Position [m]
+    wfr.mesh.xStart = 0  # Initial Horizontal Position [m]
+    wfr.mesh.xFin =  0  # Final Horizontal Position [m]
+    wfr.mesh.yStart = 0  # Initial Vertical Position [m]
+    wfr.mesh.yFin = 0    # Final Vertical Position [m]
     wfr.partBeam = eBeam
 
     #**********************Calculation (SRWLIB function calls)
@@ -609,15 +609,12 @@ def calc1d_srw_bis(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,photonEnerg
     
     print('Performing Electric Field (spectrum vs photon energy) calculation ...')
     srwlib.srwl.CalcElecFieldSR(wfr, eTraj, magFldCnt, arPrecPar)
-    # if zero_emittance:
-    #     _inIntType = 0
-    # else:
     _inIntType = 0
     arI1 = array.array('f', [0]*wfr.mesh.ne)
-    srwlib.srwl.CalcIntFromElecField(arI1, wfr, 6, _inIntType, 0, wfr.mesh.eStart, wfr.mesh.xStart, wfr.mesh.yStart)
+    srwlib.srwl.CalcIntFromElecField(arI1, wfr, 6, _inIntType, 0, wfr.mesh.eStart, 0, 0)
     print('Done calc1dSrw calculation in %10.3f s'%(time.time()-t0))
     arI1 = numpy.asarray(arI1)
-    arI1*=bl['gapH']*bl['gapV']
+
     #**********************Saving results
 
     if fileName is not None:
@@ -677,6 +674,204 @@ def calc1d_srw_bis(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,photonEnerg
 
 
     return (eArray, arI1)
+
+
+def calc1d_srw_step_by_step(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,photonEnergyPoints=500,zero_emittance=False,
+              srw_max_harmonic_number=None,fileName=None,fileAppend=False):
+
+
+    r"""
+        run SRW for calculating flux
+
+        input: a dictionary with beamline
+        output: file name with results
+    """
+
+    global scanCounter
+
+    t0 = time.time()
+    print("Inside calc1d_srw_step_by_step")
+
+    cte = codata.e/(2*numpy.pi*codata.electron_mass*codata.c)
+    B0 = bl['Kv']/bl['PeriodID']/cte
+
+    try:
+        B0x = bl['Kh']/bl['PeriodID']/cte
+    except:
+        B0x = 0.0
+
+    try:
+        Kphase = bl['Kphase']
+    except:
+        Kphase = 0.0
+        
+    try:
+        Kh = bl['Kh']
+    except:
+        Kh = 0.0
+
+    resonance_energy = get_resonance_energy(bl['ElectronEnergy'], Kh, bl['Kv'], bl["PeriodID"]) 
+
+    if srw_max_harmonic_number is None:
+        srw_max_harmonic_number = get_und_max_harmonic_number(resonance_energy, photonEnergyMax)
+        print(f"Max harmonic considered:{srw_max_harmonic_number}; Resonance energy: {resonance_energy:.2f} eV\n")
+
+    Nmax = srw_max_harmonic_number
+
+    # print('Running SRW (SRWLIB Python)')
+
+    eTraj = 0
+    n = 1               # get the calculation done correclty
+    xcID = 0            # Transverse Coordinates of Undulator Center [m]
+    ycID = 0
+    zcID = 0
+    sB = 1              # Symmetry of the Horizontal field component vs Longitudinal position
+    # print('Running SRW (SRWLIB Python)')
+    if B0x == 0:    #*********** Conventional Undulator   
+        # harmB = srwlib.SRWLMagFldH() #magnetic field harmonic
+        # harmB.n = 1 #harmonic number ??? Mostly asymmetry
+        # harmB.h_or_v = 'v' #magnetic field plane: horzontal ('h') or vertical ('v')
+        # harmB.B = B0 #magnetic field amplitude [T]
+        # und = srwlib.SRWLMagFldU([harmB])
+        # und.per = bl['PeriodID'] #period length [m]
+        # und.nPer = bl['NPeriods'] #number of periods (will be rounded to integer)
+        # #Container of all magnetic field elements
+        # magFldCnt = srwlib.SRWLMagFldC([und], srwlib.array('d', [0]), srwlib.array('d', [0]), srwlib.array('d', [0]))
+        und = srwlib.SRWLMagFldU([srwlib.SRWLMagFldH(n, 'v', B0, Kphase, sB, 1)], 
+                                 bl['PeriodID'], 
+                                 bl['NPeriods'])        
+        
+    else:  #***********Undulator (elliptical)
+        magnetic_fields = []
+        magnetic_fields.append(srwlib.SRWLMagFldH(1, 'v',
+                                           _B=B0,
+                                           _ph=0.0,
+                                           _s=sB, # 1=symmetrical, -1=antisymmetrical
+                                           _a=1.0))
+        magnetic_fields.append(srwlib.SRWLMagFldH(1, 'h',
+                                           _B=B0x,
+                                           _ph=Kphase,
+                                           _s=sB,
+                                           _a=1.0))
+        und = srwlib.SRWLMagFldU(_arHarm=magnetic_fields, _per=bl['PeriodID'], _nPer=bl['NPeriods'])
+        # magFldCnt = srwlib.SRWLMagFldC(_arMagFld=[und],
+        #                                 _arXc=srwlib.array('d', [0.0]),
+        #                                 _arYc=srwlib.array('d', [0.0]),
+        #                                 _arZc=srwlib.array('d', [0.0]))
+    magFldCnt = srwlib.SRWLMagFldC(_arMagFld=[und],
+                                    _arXc=srwlib.array('d', [xcID]),
+                                    _arYc=srwlib.array('d', [ycID]),
+                                    _arZc=srwlib.array('d', [zcID]))
+
+    #***********Electron Beam
+    eBeam = srwlib.SRWLPartBeam()
+    eBeam.Iavg = bl['ElectronCurrent'] #average current [A]
+    eBeam.partStatMom1.x = 0. #initial transverse positions [m]
+    eBeam.partStatMom1.y = 0.
+    eBeam.partStatMom1.z = - bl['PeriodID']*(bl['NPeriods']+4)/2 # initial longitudinal positions
+    eBeam.partStatMom1.xp = 0 #initial relative transverse velocities
+    eBeam.partStatMom1.yp = 0
+    eBeam.partStatMom1.gamma = bl['ElectronEnergy']*1e3/codata_mee #relative energy
+
+    if zero_emittance:
+        sigX     = 1e-25
+        sigXp    = 1e-25
+        sigY     = 1e-25
+        sigYp    = 1e-25
+        sigEperE = 1e-25
+    else:
+        sigX =  bl['ElectronBeamSizeH'] #horizontal RMS size of e-beam [m]
+        sigXp = bl['ElectronBeamDivergenceH'] #horizontal RMS angular divergence [rad]
+        sigY =  bl['ElectronBeamSizeV'] #vertical RMS size of e-beam [m]
+        sigYp = bl['ElectronBeamDivergenceV'] #vertical RMS angular divergence [rad]
+        sigEperE = bl['ElectronEnergySpread']
+
+    print("calc1dSrw: starting calculation using ElectronEnergySpead=%e \n"%((sigEperE)))
+
+    #2nd order stat. moments:
+    eBeam.arStatMom2[0] = sigX*sigX #<(x-<x>)^2>
+    eBeam.arStatMom2[1] = 0 #<(x-<x>)(x'-<x'>)>
+    eBeam.arStatMom2[2] = sigXp*sigXp #<(x'-<x'>)^2>
+    eBeam.arStatMom2[3] = sigY*sigY #<(y-<y>)^2>
+    eBeam.arStatMom2[4] = 0 #<(y-<y>)(y'-<y'>)>
+    eBeam.arStatMom2[5] = sigYp*sigYp #<(y'-<y'>)^2>
+    eBeam.arStatMom2[10] = sigEperE*sigEperE #<(E-<E>)^2>/<E>^2
+
+    #***********Precision Parameters
+    arPrecF = [0]*5 #for spectral flux vs photon energy
+    arPrecF[0] = 1 #initial UR harmonic to take into account
+    arPrecF[1] = Nmax #final UR harmonic to take into account
+    arPrecF[2] = 1.5 #longitudinal integration precision parameter
+    arPrecF[3] = 1.5 #azimuthal integration precision parameter
+    arPrecF[4] = 1 #calculate flux (1) or flux per unit surface (2)
+
+    #***********UR Stokes Parameters (mesh) for Spectral Flux
+    stkF = srwlib.SRWLStokes() #for spectral flux vs photon energy
+    #srio stkF.allocate(10000, 1, 1) #numbers of points vs photon energy, horizontal and vertical positions
+    stkF.allocate(photonEnergyPoints, 1, 1) #numbers of points vs photon energy, horizontal and vertical positions
+    stkF.mesh.zStart = bl['distance'] #longitudinal position [m] at which UR has to be calculated
+    stkF.mesh.eStart = photonEnergyMin #initial photon energy [eV]
+    stkF.mesh.eFin =   photonEnergyMax #final photon energy [eV]
+    stkF.mesh.xStart = bl['gapHcenter'] - bl['gapH']/2 #initial horizontal position [m]
+    stkF.mesh.xFin =   bl['gapHcenter'] + bl['gapH']/2 #final horizontal position [m]
+    stkF.mesh.yStart = bl['gapVcenter'] - bl['gapV']/2 #initial vertical position [m]
+    stkF.mesh.yFin =   bl['gapVcenter'] + bl['gapV']/2 #final vertical position [m]
+
+    #**********************Calculation (SRWLIB function calls)
+    print('Performing Spectral Flux (Stokes parameters) calculation ... ') # , end='')
+
+    srwlib.srwl.CalcStokesUR(stkF, eBeam, und, arPrecF)
+    print('Done calc1dSrw calculation in %10.3f s'%(time.time()-t0))
+    
+    #**********************Saving results
+
+    if fileName is not None:
+        if fileAppend:
+            f = open(fileName,"a")
+        else:
+            scanCounter = 0
+            f = open(fileName,"w")
+            f.write("#F "+fileName+"\n")
+
+        f.write("\n")
+        scanCounter +=1
+        f.write("#S %d Undulator spectrum calculation using SRW\n"%(scanCounter))
+
+        for i,j in bl.items(): # write bl values
+            f.write ("#UD %s = %s\n" % (i,j) )
+        f.write("#UD photonEnergyMin =  %f\n"%(photonEnergyMin))
+        f.write("#UD photonEnergyMax =  %f\n"%(photonEnergyMax))
+        f.write("#UD photonEnergyPoints =  %d\n"%(photonEnergyPoints))
+        f.write("#UD B0 =  %f\n"%(B0))
+
+        #
+        # write flux to file
+        #
+        header="#N 4 \n#L PhotonEnergy[eV]  PhotonWavelength[A]  Flux[phot/sec/0.1%bw]  Spectral Power[W/eV]\n"
+        f.write(header)
+
+    # eArray = numpy.zeros(photonEnergyPoints)
+    eArray = numpy.linspace(photonEnergyMin, photonEnergyMax, photonEnergyPoints)
+
+    intensArray = numpy.zeros(photonEnergyPoints)
+    for i in range(stkF.mesh.ne):
+        # ener = stkF.mesh.eStart+i*(stkF.mesh.eFin-stkF.mesh.eStart)/numpy.array((stkF.mesh.ne-1)).clip(min=1)
+        ener = eArray[i]
+        if fileName is not None: f.write(' ' + repr(ener) + '   ' + repr(m2ev/ener*1e10) + '    ' +
+                repr(stkF.arS[i]) + '    ' +
+                repr(stkF.arS[i]*codata.e*1e3) + '\n')
+        # eArray[i] = ener
+        intensArray[i] = stkF.arS[i]
+
+    if fileName is not None:
+        f.close()
+
+        if fileAppend:
+            print("Data appended to file: %s"%(os.path.join(os.getcwd(),fileName)))
+        else:
+            print("File written to disk: %s"%(os.path.join(os.getcwd(),fileName)))
+
+    return (eArray,intensArray)
 
 
 def calc1d_urgent(bl,photonEnergyMin=1000.0,photonEnergyMax=100000.0,photonEnergyPoints=500,zero_emittance=False,fileName=None,fileAppend=False):
@@ -975,7 +1170,7 @@ def calc2d_srw(bl,zero_emittance=False,hSlitPoints=101,vSlitPoints=51,
     except:
         Kphase = 0.0
 
-    print('Running SRW (SRWLIB Python)')
+    # print('Running SRW (SRWLIB Python)')
 
     if B0x == 0:    #*********** Conventional Undulator
         harmB = srwlib.SRWLMagFldH() #magnetic field harmonic
@@ -1582,7 +1777,7 @@ def calc3d_srw(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,photonEnergyPoi
     except:
         Kphase = 0.0
 
-    print('Running SRW (SRWLIB Python)')
+    # print('Running SRW (SRWLIB Python)')
 
     if B0x == 0:    #*********** Conventional Undulator
         # harmB = srwlib.SRWLMagFldH() #magnetic field harmonic
@@ -1835,7 +2030,7 @@ def calc3d_srw_step_by_step(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,ph
     except:
         Kphase = 0.0
 
-    print('Running SRW (SRWLIB Python)')
+    # print('Running SRW (SRWLIB Python)')
 
     if B0x == 0:    #*********** Conventional Undulator
         und0 = srwlib.SRWLMagFldU([srwlib.SRWLMagFldH(1, 'v', B0)], bl['PeriodID'], bl['NPeriods'])
@@ -1866,7 +2061,7 @@ def calc3d_srw_step_by_step(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,ph
         
         energy_chunks = numpy.array_split(list(eArray), num_cores)
 
-        results = Parallel(n_jobs=num_cores)(delayed(srw_energy_scan)(list_pairs,
+        results = Parallel(n_jobs=num_cores)(delayed(_srw_energy_scan)(list_pairs,
                                                                       bl,
                                                                       eBeam,
                                                                       und,
@@ -1897,7 +2092,7 @@ def calc3d_srw_step_by_step(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,ph
         vArray = numpy.linspace(-bl['gapV'] / 2, bl['gapV'] / 2, vSlitPoints, )
 
     else:
-        intensArray, hArray, vArray, enArray, t = srw_energy_scan(eArray, bl, eBeam, und, paramME,
+        intensArray, hArray, vArray, enArray, t = _srw_energy_scan(eArray, bl, eBeam, und, paramME,
                                                                   hSlitPoints, vSlitPoints, zero_emittance, USE_JOBLIB)
 
 
@@ -1967,7 +2162,7 @@ def calc3d_srw_logsparsed(bl, photonEnergyMin=3000.0, photonEnergyMax=55000.0, p
     except:
         Kphase = 0.0
 
-    print('Running SRW (SRWLIB Python)')
+    # print('Running SRW (SRWLIB Python)')
 
     if B0x == 0:    # *********** Conventional Undulator
         und0 = srwlib.SRWLMagFldU([srwlib.SRWLMagFldH(1, 'v', B0)], bl['PeriodID'], bl['NPeriods'])
@@ -2013,7 +2208,7 @@ def calc3d_srw_logsparsed(bl, photonEnergyMin=3000.0, photonEnergyMax=55000.0, p
                 bffr = numpy.delete(bffr, bffr > dE * (i + 1))
             energy_chunks.append(bffr)
 
-        results = Parallel(n_jobs=num_cores)(delayed(srw_energy_scan)(list_pairs,
+        results = Parallel(n_jobs=num_cores)(delayed(_srw_energy_scan)(list_pairs,
                                                                       bl,
                                                                       eBeam,
                                                                       und,
@@ -2044,7 +2239,7 @@ def calc3d_srw_logsparsed(bl, photonEnergyMin=3000.0, photonEnergyMax=55000.0, p
         vArray = numpy.linspace(-bl['gapV'] / 2, bl['gapV'] / 2, vSlitPoints, )
 
     else:
-        intensArray, hArray, vArray, enArray, t = srw_energy_scan(eArray, bl, eBeam, und, paramME,
+        intensArray, hArray, vArray, enArray, t = _srw_energy_scan(eArray, bl, eBeam, und, paramME,
                                                                   hSlitPoints, vSlitPoints, zero_emittance, USE_JOBLIB)
 
 
@@ -2052,57 +2247,6 @@ def calc3d_srw_logsparsed(bl, photonEnergyMin=3000.0, photonEnergyMax=55000.0, p
     print('Done Performing Spectral Flux 3d calculation in sec '+str(time.time()-t0))
 
     return (eArray, 1e3*hArray, 1e3*vArray, intensArray)
-
-
-def srw_energy_scan(energyArray, srwbln, elecBeam, und, paramME, hSlitPoints, vSlitPoints, zero_emittance, USE_JOBLIB):
-
-    tzero = time.time()
-    progress_step = int(energyArray.size / 10)
-    if progress_step == 0:
-        progress_step = 1
-
-    hArray = numpy.linspace(-srwbln['gapH'] / 2, srwbln['gapH'] / 2, hSlitPoints, )
-    vArray = numpy.linspace(-srwbln['gapV'] / 2, srwbln['gapV'] / 2, vSlitPoints, )
-    intensArray = numpy.zeros((energyArray.size, hArray.size, vArray.size,))
-
-    for ie in range(energyArray.size):
-        try:
-            if ie%progress_step == 0 and USE_JOBLIB is False:
-                print("Calculating photon energy: %f (point %d of %d)" % (energyArray[ie], ie, energyArray.size))
-
-            mesh = srwlib.SRWLRadMesh(energyArray[ie], energyArray[ie], 1,
-                                      -srwbln['gapH'] / 2, srwbln['gapH'] / 2, hSlitPoints,
-                                      -srwbln['gapV'] / 2, srwbln['gapV'] / 2, vSlitPoints, srwbln['distance'])
-
-            wfr = srwlib.SRWLWfr()
-            wfr.allocate(1, mesh.nx, mesh.ny)
-            wfr.mesh = mesh
-            wfr.partBeam = elecBeam
-
-            srwlib.srwl.CalcElecFieldSR(wfr, 0, und, paramME)
-            # print('Extracting stokes and filling output array... ')
-            mesh0 = wfr.mesh
-
-            INTENSITY_TYPE_SINGLE_ELECTRON=0
-            INTENSITY_TYPE_MULTI_ELECTRON=1
-
-            arI0 = array.array('f', [0]*mesh0.nx*mesh0.ny) #"flat" array to take 2D intensity data
-            # 6 is for total polarizarion; 0=H, 1=V
-            if zero_emittance:
-                srwlib.srwl.CalcIntFromElecField(arI0, wfr, 6, INTENSITY_TYPE_SINGLE_ELECTRON, 3, energyArray[ie], 0, 0)
-            else:
-                srwlib.srwl.CalcIntFromElecField(arI0, wfr, 6, INTENSITY_TYPE_MULTI_ELECTRON, 3, energyArray[ie], 0, 0)
-
-            Shape = (mesh0.ny, mesh0.nx)
-            data = numpy.ndarray(buffer=arI0, shape=Shape, dtype=arI0.typecode)
-
-            for ix in range(hArray.size):
-                for iy in range(vArray.size):
-                    intensArray[ie, ix, iy,] = data[iy, ix]
-        except:
-            print("Error running SRW")
-
-    return intensArray, hArray, vArray, energyArray, time.time()-tzero
 
 
 def calc3d_urgent(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,photonEnergyPoints=500,
@@ -2915,11 +3059,76 @@ def _srw_drift_electron_beam(eBeam, und ):
     return eBeam
 
 
+def _srw_energy_scan(energyArray, srwbln, elecBeam, und, paramME, hSlitPoints, vSlitPoints, zero_emittance, USE_JOBLIB):
+
+    tzero = time.time()
+    progress_step = int(energyArray.size / 10)
+    if progress_step == 0:
+        progress_step = 1
+
+    hArray = numpy.linspace(-srwbln['gapH'] / 2, srwbln['gapH'] / 2, hSlitPoints, )
+    vArray = numpy.linspace(-srwbln['gapV'] / 2, srwbln['gapV'] / 2, vSlitPoints, )
+    intensArray = numpy.zeros((energyArray.size, hArray.size, vArray.size,))
+
+    for ie in range(energyArray.size):
+        try:
+            if ie%progress_step == 0 and USE_JOBLIB is False:
+                print("Calculating photon energy: %f (point %d of %d)" % (energyArray[ie], ie, energyArray.size))
+
+            mesh = srwlib.SRWLRadMesh(energyArray[ie], energyArray[ie], 1,
+                                      -srwbln['gapH'] / 2, srwbln['gapH'] / 2, hSlitPoints,
+                                      -srwbln['gapV'] / 2, srwbln['gapV'] / 2, vSlitPoints, srwbln['distance'])
+
+            wfr = srwlib.SRWLWfr()
+            wfr.allocate(1, mesh.nx, mesh.ny)
+            wfr.mesh = mesh
+            wfr.partBeam = elecBeam
+
+            srwlib.srwl.CalcElecFieldSR(wfr, 0, und, paramME)
+            # print('Extracting stokes and filling output array... ')
+            mesh0 = wfr.mesh
+
+            INTENSITY_TYPE_SINGLE_ELECTRON=0
+            INTENSITY_TYPE_MULTI_ELECTRON=1
+
+            arI0 = array.array('f', [0]*mesh0.nx*mesh0.ny) #"flat" array to take 2D intensity data
+            # 6 is for total polarizarion; 0=H, 1=V
+            if zero_emittance:
+                srwlib.srwl.CalcIntFromElecField(arI0, wfr, 6, INTENSITY_TYPE_SINGLE_ELECTRON, 3, energyArray[ie], 0, 0)
+            else:
+                srwlib.srwl.CalcIntFromElecField(arI0, wfr, 6, INTENSITY_TYPE_MULTI_ELECTRON, 3, energyArray[ie], 0, 0)
+
+            Shape = (mesh0.ny, mesh0.nx)
+            data = numpy.ndarray(buffer=arI0, shape=Shape, dtype=arI0.typecode)
+
+            for ix in range(hArray.size):
+                for iy in range(vArray.size):
+                    intensArray[ie, ix, iy,] = data[iy, ix]
+        except:
+            print("Error running SRW")
+
+    return intensArray, hArray, vArray, energyArray, time.time()-tzero
+
+
+def get_resonance_energy(ElectronEnergy:float, Kh:float , Kv:float, UndPer:float) -> float:
+    
+    gamma = ElectronEnergy / (codata_mee * 1e-3)
+    resonance_wavelength = (1 + (Kv**2 + Kh**2) / 2.0) / 2 / gamma**2 * UndPer
+    return m2ev / resonance_wavelength
+
+
+def get_und_max_harmonic_number(resonance_energy:float, photonEnergyMax:float) -> int:
+
+    srw_max_harmonic_number = int(photonEnergyMax / resonance_energy * 2.5)
+
+    return srw_max_harmonic_number
+
 ########################################################################################################################
 #
 # Comparison scripts
 #
 ########################################################################################################################
+
 def compare_flux(beamline,emin=3000.0,emax=50000.0,npoints=200,
                  zero_emittance=False,fileName=None,):
 
