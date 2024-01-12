@@ -2,19 +2,32 @@
 # --------------------------------------------------------------------------------------------
 
 
-import numpy
 import os
 from collections import OrderedDict
 
-from xoppylib.sources.srundplug import calc1d_us, calc1d_srw, calc1d_urgent, calc1d_pysru
-from xoppylib.sources.srundplug import calc2d_us, calc2d_srw, calc2d_urgent, calc2d_pysru
-from xoppylib.sources.srundplug import calc3d_us, calc3d_srw, calc3d_urgent, calc3d_pysru, calc3d_srw_step_by_step, calc3d_srw_logsparsed
-
-from xoppylib.fit_gaussian2d import fit_gaussian2d, info_params, twoD_Gaussian
-
+import numpy
+import scipy.constants as codata
 from srxraylib.util.h5_simple_writer import H5SimpleWriter
 
-import scipy.constants as codata
+from xoppylib.fit_gaussian2d import fit_gaussian2d, info_params, twoD_Gaussian
+from xoppylib.sources.srundplug import (
+    calc1d_srw,
+    calc1d_srw_parallel,
+    calc1d_srw_step_by_step,
+    calc1d_urgent,
+    calc1d_us,
+    calc2d_pysru,
+    calc2d_srw,
+    calc2d_urgent,
+    calc2d_us,
+    calc3d_pysru,
+    calc3d_srw,
+    calc3d_srw_logsparsed,
+    calc3d_srw_step_by_step,
+    calc3d_urgent,
+    calc3d_us,
+)
+
 codata_mee = codata.codata.physical_constants["electron mass energy equivalent in MeV"][0]
 
 # --------------------------------------------------------------------------------------------
@@ -27,7 +40,8 @@ def xoppy_calc_undulator_spectrum(ELECTRONENERGY=6.04,ELECTRONENERGYSPREAD=0.001
                               GAPH=0.001,GAPV=0.001,GAPH_CENTER=0.0,GAPV_CENTER=0.0,\
                               PHOTONENERGYMIN=3000.0,PHOTONENERGYMAX=55000.0,PHOTONENERGYPOINTS=500,METHOD=2,
                               USEEMITTANCES=1):
-    print("Inside xoppy_calc_undulator_spectrum. ")
+    
+    print("> Inside xoppy_calc_undulator_spectrum. \n")
 
     bl = OrderedDict()
     bl['ElectronBeamDivergenceH'] = ELECTRONBEAMDIVERGENCEH
@@ -84,13 +98,36 @@ def xoppy_calc_undulator_spectrum(ELECTRONENERGY=6.04,ELECTRONENERGYSPREAD=0.001
               photonEnergyPoints=PHOTONENERGYPOINTS,fileName=outFile,fileAppend=False,zero_emittance=zero_emittance)
         print("Done")
         print("\nCheck calculation output at: %s"%(os.path.join(os.getcwd(),"urgent.out")))
-    if METHOD == 2:
+        
+    if METHOD == -2:
+        print("Undulator flux calculation using SRW. Please wait...")
+
         # get the maximum harmonic number
         h_max = int(2.5*PHOTONENERGYMAX/resonance_energy)
-
-        print ("Number of harmonics considered: %d \n"%(h_max))
+        #print ("Number of harmonics considered: %d \n"%(h_max))
+        e, f = calc1d_srw_parallel(bl,photonEnergyMin=PHOTONENERGYMIN,photonEnergyMax=PHOTONENERGYMAX,
+              photonEnergyPoints=PHOTONENERGYPOINTS,fileName=outFile,fileAppend=False,zero_emittance=zero_emittance,
+              srw_max_harmonic_number=h_max)
+        print("Done")
+        
+    if METHOD == 2:
         print("Undulator flux calculation using SRW. Please wait...")
+
+        # get the maximum harmonic number
+        h_max = int(2.5*PHOTONENERGYMAX/resonance_energy)
+        #print ("Number of harmonics considered: %d \n"%(h_max))
         e, f = calc1d_srw(bl,photonEnergyMin=PHOTONENERGYMIN,photonEnergyMax=PHOTONENERGYMAX,
+              photonEnergyPoints=PHOTONENERGYPOINTS,fileName=outFile,fileAppend=False,zero_emittance=zero_emittance,
+              srw_max_harmonic_number=h_max)
+        print("Done")
+        
+    if METHOD == 22:
+        print("Undulator flux calculation using SRW. Please wait...")
+
+        # get the maximum harmonic number
+        h_max = int(2.5*PHOTONENERGYMAX/resonance_energy)
+        #print ("Number of harmonics considered: %d \n"%(h_max))
+        e, f = calc1d_srw_step_by_step(bl,photonEnergyMin=PHOTONENERGYMIN,photonEnergyMax=PHOTONENERGYMAX,
               photonEnergyPoints=PHOTONENERGYPOINTS,fileName=outFile,fileAppend=False,zero_emittance=zero_emittance,
               srw_max_harmonic_number=h_max)
         print("Done")
@@ -99,8 +136,11 @@ def xoppy_calc_undulator_spectrum(ELECTRONENERGY=6.04,ELECTRONENERGYSPREAD=0.001
         print("\nNo emittance calculation")
 
     if METHOD == 1 and len(e) == 0: raise Exception("Invalid Input Parameters")
-
-    power_in_spectrum = f.sum()*1e3*codata.e*(e[1]-e[0])
+    try:
+        power_in_spectrum = f.sum()*1e3*codata.e*(e[1]-e[0])
+    except:
+        power_in_spectrum = 0
+        
     print("\nPower from integral of spectrum: %8.3f W"%(power_in_spectrum))
     print("\nRatio Power from integral of spectrum over Total emitted power: %5.4f"%(power_in_spectrum / ptot))
 
@@ -256,7 +296,6 @@ def xoppy_calc_undulator_power_density(ELECTRONENERGY=6.04,ELECTRONENERGYSPREAD=
             print("ERROR initializing h5 file")
 
     return h, v, p, code
-
 
 
 def xoppy_calc_undulator_radiation(ELECTRONENERGY=6.04,ELECTRONENERGYSPREAD=0.001,ELECTRONCURRENT=0.2,\
@@ -450,7 +489,7 @@ def xoppy_calc_undulator_radiation(ELECTRONENERGY=6.04,ELECTRONENERGYSPREAD=0.00
 
 if __name__ == "__main__":
 
-    from srxraylib.plot.gol import plot,plot_image
+    from srxraylib.plot.gol import plot, plot_image
 
     e, f, spectral_power, cumulated_power = xoppy_calc_undulator_spectrum()
     plot(e,f)
