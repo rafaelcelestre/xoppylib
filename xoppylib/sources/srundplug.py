@@ -744,7 +744,6 @@ def calc1d_srw_parallel(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,photon
                                                                     eBeam,
                                                                     und,
                                                                     arPrecF,
-                                                                    resonance_energy
                                                                     )
                                              for list_pairs in energy_chunks)
         energy_array = []
@@ -765,7 +764,7 @@ def calc1d_srw_parallel(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,photon
         for ptime in range(len(time_array)):
             print(f" Core {ptime+1}: {time_array[ptime]:.2f} s for {energy_chunks[ptime]} pts (E0 = {energy_array[ptime]:.1f} eV).")
     else:
-        intensArray, energy_array, t = _srw_spectrum(eArray, bl, eBeam, und, arPrecF, resonance_energy)
+        intensArray, energy_array, t = _srw_spectrum(eArray, bl, eBeam, und, arPrecF)
         intensArray = numpy.asarray(intensArray, dtype="float64")
     
     # RC 10JAN2024: debug
@@ -1003,57 +1002,6 @@ def calc1d_srw_step_by_step(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,ph
             print("File written to disk: %s"%(os.path.join(os.getcwd(),fileName)))
 
     return (eArray, intensArray)
-
-
-def _srw_spectrum(energyArray, srwbln, elecBeam, und, arPrec, resEn):
-    
-    tzero = time.time()
-
-    npts = len(energyArray)
-    #***********UR Stokes Parameters (mesh) for Spectral Flux
-        
-    stk = srwlib.SRWLStokes() #for spectral flux vs photon energy
-    stk.allocate(npts, 1, 1) #numbers of points vs photon energy, horizontal and vertical positions
-    stk.mesh.zStart = srwbln['distance'] #longitudinal position [m] at which UR has to be calculated
-    stk.mesh.eStart = energyArray[0] #initial photon energy [eV]
-    stk.mesh.eFin =   energyArray[-1] #final photon energy [eV]
-    stk.mesh.xStart = srwbln['gapHcenter'] - srwbln['gapH']/2 #initial horizontal position [m]
-    stk.mesh.xFin =   srwbln['gapHcenter'] + srwbln['gapH']/2 #final horizontal position [m]
-    stk.mesh.yStart = srwbln['gapVcenter'] - srwbln['gapV']/2 #initial vertical position [m]
-    stk.mesh.yFin =   srwbln['gapVcenter'] + srwbln['gapV']/2 #final vertical position [m]
-    srwlib.srwl.CalcStokesUR(stk, elecBeam, und, arPrec)
-    intensArray = stk.arS[0:npts]
-    
-    return intensArray, energyArray, time.time()-tzero
-    
-
-def _srw_spectrum_scan(energyArray, srwbln, elecBeam, und, arPrec):
-
-    tzero = time.time()
-    intensArray = []
-    progress_step = int(energyArray.size / 10)
-    if progress_step == 0:
-        progress_step = 1
-    for ie in range(energyArray.size):
-        try:
-            if ie%progress_step == 0 and USE_JOBLIB is False:
-                print("Calculating photon energy: %.3f (point %d of %d)" % (energyArray[ie], ie, energyArray.size))
-                
-            stkF = srwlib.SRWLStokes() #for spectral flux vs photon energy
-            stkF.allocate(1, 1, 1) #numbers of points vs photon energy, horizontal and vertical positions
-            stkF.mesh.zStart = srwbln['distance'] #longitudinal position [m] at which UR has to be calculated
-            stkF.mesh.xStart = srwbln['gapHcenter'] - srwbln['gapH']/2 #initial horizontal position [m]
-            stkF.mesh.xFin =   srwbln['gapHcenter'] + srwbln['gapH']/2 #final horizontal position [m]
-            stkF.mesh.yStart = srwbln['gapVcenter'] - srwbln['gapV']/2 #initial vertical position [m]
-            stkF.mesh.yFin =   srwbln['gapVcenter'] + srwbln['gapV']/2 #final vertical position [m]
-            stkF.mesh.eStart = energyArray[ie] #initial photon energy [eV]
-            stkF.mesh.eFin =   energyArray[ie] #initial photon energy [eV]
-            srwlib.srwl.CalcStokesUR(stkF, elecBeam, und, arPrec)
-            intensArray.append(stkF.arS[0])
-        except:
-            print("Error running SRW")
-
-    return intensArray, energyArray, time.time()-tzero
 
 
 def calc1d_urgent(bl,photonEnergyMin=1000.0,photonEnergyMax=100000.0,photonEnergyPoints=500,zero_emittance=False,fileName=None,fileAppend=False):
@@ -1903,6 +1851,7 @@ def calc2d_urgent(bl,zero_emittance=False,fileName=None,fileAppend=False,hSlitPo
 # 3D: calc3d<code> Emission calculations
 #
 ########################################################################################################################
+
 def calc3d_srw(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,photonEnergyPoints=500,
                zero_emittance=False,hSlitPoints=51,vSlitPoints=51,
                fileName=None,fileAppend=False):
@@ -3300,6 +3249,57 @@ def _srw_energy_scan(energyArray, srwbln, elecBeam, und, paramME, hSlitPoints, v
             print("Error running SRW")
 
     return intensArray, hArray, vArray, energyArray, time.time()-tzero
+
+
+def _srw_spectrum(energyArray, srwbln, elecBeam, und, arPrec):
+    
+    tzero = time.time()
+
+    npts = len(energyArray)
+    #***********UR Stokes Parameters (mesh) for Spectral Flux
+        
+    stk = srwlib.SRWLStokes() #for spectral flux vs photon energy
+    stk.allocate(npts, 1, 1) #numbers of points vs photon energy, horizontal and vertical positions
+    stk.mesh.zStart = srwbln['distance'] #longitudinal position [m] at which UR has to be calculated
+    stk.mesh.eStart = energyArray[0] #initial photon energy [eV]
+    stk.mesh.eFin =   energyArray[-1] #final photon energy [eV]
+    stk.mesh.xStart = srwbln['gapHcenter'] - srwbln['gapH']/2 #initial horizontal position [m]
+    stk.mesh.xFin =   srwbln['gapHcenter'] + srwbln['gapH']/2 #final horizontal position [m]
+    stk.mesh.yStart = srwbln['gapVcenter'] - srwbln['gapV']/2 #initial vertical position [m]
+    stk.mesh.yFin =   srwbln['gapVcenter'] + srwbln['gapV']/2 #final vertical position [m]
+    srwlib.srwl.CalcStokesUR(stk, elecBeam, und, arPrec)
+    intensArray = stk.arS[0:npts]
+    
+    return intensArray, energyArray, time.time()-tzero
+    
+
+def _srw_spectrum_scan(energyArray, srwbln, elecBeam, und, arPrec):
+
+    tzero = time.time()
+    intensArray = []
+    progress_step = int(energyArray.size / 10)
+    if progress_step == 0:
+        progress_step = 1
+    for ie in range(energyArray.size):
+        try:
+            if ie%progress_step == 0 and USE_JOBLIB is False:
+                print("Calculating photon energy: %.3f (point %d of %d)" % (energyArray[ie], ie, energyArray.size))
+                
+            stkF = srwlib.SRWLStokes() #for spectral flux vs photon energy
+            stkF.allocate(1, 1, 1) #numbers of points vs photon energy, horizontal and vertical positions
+            stkF.mesh.zStart = srwbln['distance'] #longitudinal position [m] at which UR has to be calculated
+            stkF.mesh.xStart = srwbln['gapHcenter'] - srwbln['gapH']/2 #initial horizontal position [m]
+            stkF.mesh.xFin =   srwbln['gapHcenter'] + srwbln['gapH']/2 #final horizontal position [m]
+            stkF.mesh.yStart = srwbln['gapVcenter'] - srwbln['gapV']/2 #initial vertical position [m]
+            stkF.mesh.yFin =   srwbln['gapVcenter'] + srwbln['gapV']/2 #final vertical position [m]
+            stkF.mesh.eStart = energyArray[ie] #initial photon energy [eV]
+            stkF.mesh.eFin =   energyArray[ie] #initial photon energy [eV]
+            srwlib.srwl.CalcStokesUR(stkF, elecBeam, und, arPrec)
+            intensArray.append(stkF.arS[0])
+        except:
+            print("Error running SRW")
+
+    return intensArray, energyArray, time.time()-tzero
 
 
 def get_resonance_energy(ElectronEnergy:float, Kh:float , Kv:float, UndPer:float) -> float:
